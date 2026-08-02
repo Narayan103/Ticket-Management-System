@@ -1,0 +1,30 @@
+.app {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 12px;
+  min-height: 100vh;
+  text-align: center;
+}
+
+.api-status {
+  font-family: monospace;
+  padding: 4px 10px;
+  border-radius: 6px;
+}
+
+.api-status--checking {
+  color: #6b7280;
+  background: #f3f4f6;
+}
+
+.api-status--ok {
+  color: #15803d;
+  background: #dcfce7;
+}
+
+.api-status--error {
+  color: #b91c1c;
+  background: #fee2e2;
+}
