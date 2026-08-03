@@ -1,0 +1,11 @@
+# dependencies (bun install)
+node_modules
+
+# env
+.env
+
+# playwright artifacts
+test-results
+playwright-report
+blob-report
+playwright/.cache

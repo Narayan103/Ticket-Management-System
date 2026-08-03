@@ -34,7 +34,15 @@ bun run lint      # oxlint
 bun run preview   # preview production build
 ```
 
-No test runner is configured in either project yet.
+**E2E** (`e2e/`) — a third independent Bun project, Playwright driving both `client/` and `server/`:
+```bash
+bun install
+cp .env.example .env    # set TEST_DATABASE_URL, SERVER_PORT, CLIENT_PORT
+bun run test             # playwright test — sets up the test DB, then boots server (port 3002) + client (port 4300) itself
+bun run test:ui          # playwright test --ui
+```
+No test files exist yet — `e2e/tests/` is currently empty (`.gitkeep` only). The point of this project is that it runs against its own Postgres database (`ticket_management_test` by default), never the dev `ticket_management` database, so tests can freely create/mutate/delete data without touching real dev state. `playwright.config.ts`'s `webServer` array starts `server/` with `DATABASE_URL`/`PORT`/`CLIENT_URL` overridden to the test values (everything else, e.g. `BETTER_AUTH_SECRET`, still comes from `server/.env`) and `client/` with `VITE_API_URL` pointed at the test server — both torn down automatically after the run.
+- The server's `webServer.command` is `bun ../e2e/setup-test-db.ts && bun run start`, **not** a Playwright `globalSetup` file — `webServer` startup and `globalSetup` are not guaranteed to run in order (confirmed: they raced, and the server tried to query the test DB before it existed). Chaining the DB setup into the command itself guarantees it runs to completion first. `setup-test-db.ts` creates `ticket_management_test` if missing and runs `prisma migrate deploy` against it — idempotent, safe to run on every test invocation.
 
 ## Architecture
 

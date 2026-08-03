@@ -9,7 +9,6 @@ export const auth = betterAuth({
   emailAndPassword: { enabled: true, disableSignUp: true },
   trustedOrigins: [CLIENT_URL],
   rateLimit: {
-    enabled: true,
     storage: "database",
     customRules: {
       "/sign-in/email": { window: 60, max: 5 },
