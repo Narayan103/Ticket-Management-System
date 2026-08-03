@@ -15,6 +15,16 @@ Before writing or changing code that touches Bun, Express, React, or Vite APIs, 
 ## Writing E2E tests
 
 Use the `e2e-test-writer` agent (`.claude/agents/e2e-test-writer.md`) to write or update Playwright end-to-end tests, rather than writing them directly — it has this project's testing setup and conventions (test database, `webServer` config, auth flow, role-gating patterns) built in. Delegate to it proactively whenever a user-facing feature (a new page, route, form, or auth/role-gated flow) is added or changed, not just when explicitly asked for tests.
+****
+## Writing component tests
+
+Client component tests use **Vitest** + **React Testing Library**, configured in the `test` block of `client/vite.config.ts` (`environment: 'jsdom'`, `globals: true`, `setupFiles: './src/test-setup.ts'` which imports `@testing-library/jest-dom` matchers).
+
+- Co-locate tests next to the component: `Foo.tsx` → `Foo.test.tsx`.
+- Any component under a `QueryClientProvider` (i.e. anything using `useQuery`/`useMutation`) must be rendered with `renderWithQuery` from `client/src/test-utils.tsx`, not raw RTL `render` — it wraps the component in a fresh `QueryClient` per test (`retry: false`, so failures surface immediately instead of retrying). `UsersPage.test.tsx` is the reference example.
+- Mock `apiClient` (`vi.mock('@/lib/api-client', () => ({ apiClient: { get: vi.fn() } }))`) rather than mocking `axios` or hitting the real API — `axios.isAxiosError` is left un-mocked so error-shape assertions still work against plain rejected objects (`{ isAxiosError: true, response: { data: { error: '...' } } }`).
+- Because `globals: true` is set, `describe`/`it`/`expect`/`vi` don't need importing, but this codebase imports them explicitly from `vitest` anyway for clarity — follow that convention.
+- Run with `bun run test` (single run) or `bun run test:watch` (watch mode) from `client/`.
 
 ## Commands
 
@@ -32,20 +42,22 @@ bunx prisma generate                    # regenerate client without a migration
 **Client** (`client/`):
 ```bash
 bun install
-bun run dev       # vite dev server
-bun run build     # tsc -b && vite build
-bun run lint      # oxlint
-bun run preview   # preview production build
+bun run dev         # vite dev server
+bun run build       # tsc -b && vite build
+bun run lint        # oxlint
+bun run preview     # preview production build
+bun run test        # vitest run — component tests, single run
+bun run test:watch  # vitest — component tests, watch mode
 ```
 
-E2E testing (`e2e/`, Playwright) setup/commands are documented in the `e2e-test-writer` agent, not here — see "Writing E2E tests" above.
+E2E testing (`e2e/`, Playwright) setup/commands are documented in the `e2e-test-writer` agent, not here — see "Writing E2E tests" above. Component tests (Vitest + RTL, inside `client/`) are documented above under "Writing component tests" instead.
 
 ## Architecture
 
 - `server/index.ts` is the entire backend right now: a single Express app (run directly by the Bun runtime, no build step) with CORS enabled, JSON body parsing, one `/api/health` route, then a catch-all 404 handler and a centralized error-handling middleware at the bottom of the file. New routes should be added before those two catch-all handlers, and prefixed with `/api`.
 - **Client data fetching**: use `axios` (via the shared `apiClient` instance in `client/src/lib/api-client.ts`, `baseURL: VITE_API_URL` falling back to `http://localhost:3001`, `withCredentials: true`) wrapped in **TanStack Query** (`@tanstack/react-query`) — `useQuery`/`useMutation`, never a raw `fetch()` or manual `useEffect`/`useState` fetch. `QueryClientProvider` is set up once in `client/src/main.tsx`. `UsersPage.tsx` is the reference example: `useQuery({ queryKey: [...], queryFn: () => apiClient.get(...).then(res => res.data) })`, with `axios.isAxiosError(error)` to extract the server's `{ error }` message on failure. Each project has its own `.env.example` documenting its expected env vars — copy to `.env` locally, don't commit `.env`.
 - Client and server run on different ports in dev (Vite picks 5173+ depending on availability, server defaults to 3001 via `PORT`), so the CORS setup in `server/index.ts` is required for the client to reach the API at all — don't remove it.
-- The client is a Vite `react-ts` template (oxlint for linting, no test setup) with `react-router-dom` added for routing (`client/src/App.tsx`), and shadcn/ui (`components.json`, `src/components/ui/`) installed with the default `base-nova` (Base UI, not Radix) theme — add components with `bunx shadcn@latest add <name>` from `client/`.
+- The client is a Vite `react-ts` template (oxlint for linting, Vitest + React Testing Library for component tests — see "Writing component tests") with `react-router-dom` added for routing (`client/src/App.tsx`), and shadcn/ui (`components.json`, `src/components/ui/`) installed with the default `base-nova` (Base UI, not Radix) theme — add components with `bunx shadcn@latest add <name>` from `client/`.
 - **Database**: `server/prisma/schema.prisma` defines `User`/`Session`/`Ticket` models and the `Role`/`TicketStatus`/`TicketCategory` enums (matching `project-scope.md`), backed by a local Postgres `ticket_management` database. This project uses **Prisma 7**, which changed some things from older Prisma docs/training data:
   - The generator is `provider = "prisma-client"` (not `prisma-client-js`), output to `server/generated/prisma` (gitignored, regenerated by `prisma generate`/`migrate dev`) — import from `./generated/prisma/client`, not `@prisma/client` directly.
   - The connection string lives in `prisma.config.ts` (reads `DATABASE_URL` from `.env` via `dotenv/config`), not in the `datasource` block in `schema.prisma`.
