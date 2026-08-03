@@ -37,24 +37,39 @@ Both projects define a `Role` type/value for `'ADMIN' | 'AGENT'` and code should
   export type Role = (typeof Role)[keyof typeof Role]
   ```
   Call sites look identical either way (`Role.ADMIN`, `Role.AGENT`) — see `AdminLayout.tsx`, `NavBar.tsx`, `UsersPage.tsx`.
-- The two `Role` definitions are separate, hand-kept-in-sync values (not shared code) — `client/` and `server/` are independent projects, not a monorepo (see "Commands" below).
+- The two `Role` definitions are separate, hand-kept-in-sync values, deliberately *not* pulled into the shared `core` package (see "Shared code" below) — the server's real TS `enum` would fail to compile under the client's `erasableSyntaxOnly` setting if imported through `core`, since `tsc` applies the *importing* project's compiler options to every file in its program, not the exporting file's own tsconfig.
+
+## Shared code (`core` package)
+
+`core/` is an internal, unbuilt package for code that both `client/` and `server/` need to import identically — currently just zod validation schemas (see "Data validation" below). It's a workspace member (see "Commands"), declared as a dependency in both `client/package.json` and `server/package.json` as `"core": "workspace:*"`, and imported like any other package: `import { createUserSchema } from "core"`.
+
+- `core/package.json`'s `main`/`types` point straight at `./src/index.ts` — there's no build step. Both Bun (`server/`) and Vite/esbuild (`client/`) transpile `core`'s `.ts` source directly at import time, the same way they handle their own source, since both projects already use `"moduleResolution": "bundler"` + `allowImportingTsExtensions`.
+- `core/src/index.ts` is a barrel re-exporting everything from `core/src/schemas/*.ts` (one file per resource, e.g. `core/src/schemas/user.ts` exports `createUserSchema`/`CreateUserInput`) — add new shared schemas as new files there and re-export them from the barrel, rather than growing a single file.
+- Not everything belongs in `core` — only put a schema (or other code) there if both `client/` and `server/` genuinely need the *same* definition. See the `Role` note above for a case that deliberately stays split instead.
+
+## Writing forms
+
+Client-side forms use **react-hook-form** + **zod** (via `@hookform/resolvers/zod`) — not manual `useState` per field, and not raw HTML5 validation attributes. `client/src/components/CreateUserForm.tsx` is the reference example.
+
+- Define a `z.object({...})` schema colocated with the form component (or in `core`, if the server needs the same shape — see "Data validation" below), derive the form type with `z.infer<typeof schema>`, and pass `{ resolver: zodResolver(schema) }` to `useForm`.
+- Wire fields with `register('fieldName')` on the shadcn `Input`, and render errors with `FieldError errors={[errors.fieldName]}` from `@/components/ui/field` — this project's shadcn setup has the newer `Field`/`FieldLabel`/`FieldError` primitives instead of the classic RHF-bound `Form`/`FormField` components, so it's wired to `formState.errors` by hand, not through a `<Form>` wrapper.
+- Add `noValidate` to the `<form>` if any field uses an HTML5-validated input type (e.g. `type="email"`) — otherwise the browser's native constraint validation blocks submission before react-hook-form/zod ever runs, and your zod error message never appears.
+- When a form lives inside a modal, split it into two components: a thin `*Modal.tsx` that only owns the `Dialog` chrome and `open`/`onOpenChange` state, and a `*Form.tsx` that owns the `useForm`/`useMutation`/fields (`CreateUserModal.tsx` + `CreateUserForm.tsx` is the reference pair). Reset the form when the dialog closes with a `useEffect` watching the `open` prop (`if (!open) reset()`) rather than wrapping `onOpenChange` — that way reset fires no matter how the dialog closed (submit success, Escape, backdrop click, or the built-in close button), not just the paths the modal wrapper happens to intercept.
 
 ## Data validation
 
-Use **zod** for validating request/form input on both sides — not manual type checks, regexes, or hand-rolled if-chains.
+Use **zod** for validating input on both sides — not manual type checks, regexes, or hand-rolled if-chains. On the client this means react-hook-form + `zodResolver`, per "Writing forms" above.
 
-- **Server**: define a `z.object({...})` schema next to the route (see `createUserSchema` and `POST /api/users` in `server/index.ts`) and validate with `schema.safeParse(req.body)`; on failure, respond `400` with `parsed.error.issues[0]?.message`. `zod` is a direct dependency of `server/` (added alongside this pattern) even though the backend has no other request-validation library.
-- **Client**: define the matching schema with `zodResolver` from `@hookform/resolvers/zod`, passed to `useForm`'s `resolver` option (see `client/src/components/CreateUserModal.tsx`), so react-hook-form surfaces the same messages inline via `FieldError`.
-- Client and server schemas are defined separately (not shared) since `client/` and `server/` are independent projects, not a monorepo — keep the validation rules in sync by hand when they need to match.
-- If a form field uses `<Input type="email">` (or any HTML5-validated input type), add `noValidate` to the `<form>` — otherwise the browser's native constraint validation intercepts submission before react-hook-form/zod ever runs, and your zod error message never appears.
+- **Define schemas shared by client and server in the `core` package, not locally in either project.** If a route's request body and its corresponding client form need to validate the same shape (the common case), write one `z.object({...})` in `core/src/schemas/<name>.ts` (see `createUserSchema` in `core/src/schemas/user.ts`), export it and its `z.infer` type from `core/src/index.ts`, and import it from `"core"` on both sides — see `server/routes/users.ts` and `client/src/components/CreateUserForm.tsx`. Don't redefine the same validation rules separately in `client/` and `server/`.
+- **Server**: validate with `schema.safeParse(req.body)`; on failure, respond `400` with `parsed.error.issues[0]?.message`.
+- A schema only needs to live in `core` if both sides use it — validation that's genuinely one-sided (e.g. a client-only UI-state check with no server counterpart) can stay local to that project instead.
 
 ## Commands
 
-This is not a workspace/monorepo — `client/` and `server/` are two independent Bun projects, each with its own `package.json` and lockfile. Run commands from inside the respective directory.
+The repo root is a **Bun workspace** (`workspaces: ["client", "server", "core"]` in the root `package.json`) — there's a single root-level `bun.lock`/`node_modules`, not separate ones per project. Run `bun install` from the repo **root** (not from inside `client/`/`server/`) whenever a dependency changes anywhere in the workspace, including in `core/`. Every other command (`bun run dev`, `bun run test`, etc.) still runs from inside the individual project's directory, same as before — only the install step moved to the root. `core/` has no scripts of its own and is never run directly. `e2e/` remains a separate Bun project outside the workspace (it doesn't depend on `core`) with its own install.
 
 **Server** (`server/`):
 ```bash
-bun install
 bun run dev     # bun --watch index.ts
 bun run start   # bun index.ts
 bunx prisma migrate dev --name <name>   # after editing prisma/schema.prisma
@@ -63,7 +78,6 @@ bunx prisma generate                    # regenerate client without a migration
 
 **Client** (`client/`):
 ```bash
-bun install
 bun run dev         # vite dev server
 bun run build       # tsc -b && vite build
 bun run lint        # oxlint

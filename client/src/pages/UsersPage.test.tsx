@@ -1,17 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
-import { screen } from '@testing-library/react'
+import { screen, waitFor } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
 import { apiClient } from '@/lib/api-client'
 import { renderWithQuery } from '@/test-utils'
 import UsersPage from './UsersPage'
+import type { User } from '@/components/UsersTable'
 
 vi.mock('@/lib/api-client', () => ({
   apiClient: { get: vi.fn() },
 }))
 
-vi.mock('@/components/CreateUserModal', () => ({
-  default: ({ open }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
-    <div data-testid="create-user-modal" data-open={open} />
+vi.mock('@/components/UsersTable', () => ({
+  default: ({ users, isPending }: { users: User[]; isPending: boolean }) => (
+    <div data-testid="users-table" data-pending={isPending} data-count={users.length} />
   ),
 }))
 
@@ -26,55 +27,34 @@ describe('UsersPage', () => {
     mockedGet.mockReset()
   })
 
-  it('shows a loading skeleton while the request is pending', () => {
+  it('passes the pending state to UsersTable while the request is in flight', () => {
     mockedGet.mockReturnValue(new Promise(() => {}))
 
-    const { container } = renderUsersPage()
+    renderUsersPage()
 
-    expect(screen.getByRole('table')).toBeInTheDocument()
-    expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0)
+    expect(screen.getByTestId('users-table')).toHaveAttribute('data-pending', 'true')
+    expect(screen.getByTestId('users-table')).toHaveAttribute('data-count', '0')
   })
 
-  it('renders users once the request resolves', async () => {
+  it('passes the fetched users to UsersTable once the request resolves', async () => {
     mockedGet.mockResolvedValue({
       data: {
         users: [
-          {
-            id: '1',
-            name: 'Ada Lovelace',
-            email: 'ada@example.com',
-            role: 'ADMIN',
-            createdAt: '2024-01-15T00:00:00.000Z',
-          },
-          {
-            id: '2',
-            name: 'Grace Hopper',
-            email: 'grace@example.com',
-            role: 'AGENT',
-            createdAt: '2024-02-20T00:00:00.000Z',
-          },
+          { id: '1', name: 'Ada Lovelace', email: 'ada@example.com', role: 'ADMIN', createdAt: '2024-01-15T00:00:00.000Z' },
+          { id: '2', name: 'Grace Hopper', email: 'grace@example.com', role: 'AGENT', createdAt: '2024-02-20T00:00:00.000Z' },
         ],
       },
     })
 
     renderUsersPage()
 
-    expect(await screen.findByText('Ada Lovelace')).toBeInTheDocument()
-    expect(screen.getByText('ada@example.com')).toBeInTheDocument()
-    expect(screen.getByText('ADMIN')).toBeInTheDocument()
-    expect(screen.getByText('Grace Hopper')).toBeInTheDocument()
-    expect(screen.getByText('AGENT')).toBeInTheDocument()
+    await waitFor(() => {
+      expect(screen.getByTestId('users-table')).toHaveAttribute('data-pending', 'false')
+    })
+    expect(screen.getByTestId('users-table')).toHaveAttribute('data-count', '2')
   })
 
-  it('shows an empty state when there are no users', async () => {
-    mockedGet.mockResolvedValue({ data: { users: [] } })
-
-    renderUsersPage()
-
-    expect(await screen.findByText('No users found.')).toBeInTheDocument()
-  })
-
-  it('shows the server error message when the request fails', async () => {
+  it('shows the server error message instead of the table when the request fails', async () => {
     mockedGet.mockRejectedValue({
       isAxiosError: true,
       response: { data: { error: 'Not authorized' } },
@@ -83,6 +63,7 @@ describe('UsersPage', () => {
     renderUsersPage()
 
     expect(await screen.findByText('Not authorized')).toBeInTheDocument()
+    expect(screen.queryByTestId('users-table')).not.toBeInTheDocument()
   })
 
   it('shows a Create User button above the list', () => {
@@ -93,16 +74,51 @@ describe('UsersPage', () => {
     expect(screen.getByRole('button', { name: 'Create User' })).toBeInTheDocument()
   })
 
-  it('opens the create user modal when the button is clicked', async () => {
+  it('opens the create user dialog when the button is clicked', async () => {
     mockedGet.mockReturnValue(new Promise(() => {}))
     const user = userEvent.setup()
 
     renderUsersPage()
 
-    expect(screen.getByTestId('create-user-modal')).toHaveAttribute('data-open', 'false')
+    expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
 
     await user.click(screen.getByRole('button', { name: 'Create User' }))
 
-    expect(screen.getByTestId('create-user-modal')).toHaveAttribute('data-open', 'true')
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+    expect(screen.getByRole('heading', { name: 'Create User' })).toBeInTheDocument()
+  })
+
+  it('closes the create user dialog when the Escape key is pressed', async () => {
+    mockedGet.mockReturnValue(new Promise(() => {}))
+    const user = userEvent.setup()
+
+    renderUsersPage()
+
+    await user.click(screen.getByRole('button', { name: 'Create User' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    await user.keyboard('{Escape}')
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
+  })
+
+  it('closes the create user dialog when clicking outside of it', async () => {
+    mockedGet.mockReturnValue(new Promise(() => {}))
+    const user = userEvent.setup()
+
+    renderUsersPage()
+
+    await user.click(screen.getByRole('button', { name: 'Create User' }))
+    expect(screen.getByRole('dialog')).toBeInTheDocument()
+
+    const backdrop = document.querySelector('[data-slot="dialog-overlay"]')
+    if (!backdrop) throw new Error('dialog overlay not found')
+    await user.click(backdrop)
+
+    await waitFor(() => {
+      expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
+    })
   })
 })

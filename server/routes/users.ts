@@ -1,15 +1,9 @@
 import { Router } from "express";
-import { z } from "zod";
+import { createUserSchema } from "core";
 import { auth } from "../auth";
 import { requireAuth, requireAdmin } from "../require-auth";
 import { db } from "../db";
 import { Role } from "../types/role";
-
-const createUserSchema = z.object({
-  name: z.string().trim().min(3, "Name must be at least 3 characters"),
-  email: z.string().trim().email("A valid email is required"),
-  password: z.string().min(8, "Password must be at least 8 characters"),
-});
 
 export const usersRouter = Router();
 
