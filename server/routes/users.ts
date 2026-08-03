@@ -9,6 +9,7 @@ export const usersRouter = Router();
 
 usersRouter.get("/", requireAuth, requireAdmin, async (_req, res) => {
   const users = await db.authUser.findMany({
+    where: { deletedAt: null },
     select: { id: true, name: true, email: true, role: true, createdAt: true },
     orderBy: { name: "asc" },
   });
@@ -88,4 +89,43 @@ usersRouter.put("/:id", requireAuth, requireAdmin, async (req, res) => {
   res.json({
     user: { id: updatedUser.id, name: updatedUser.name, email: updatedUser.email, role: updatedUser.role, createdAt: updatedUser.createdAt },
   });
+});
+
+usersRouter.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
+  const { id } = req.params;
+  if (typeof id !== "string") {
+    res.status(400).json({ error: "Invalid user id" });
+    return;
+  }
+
+  const targetUser = await db.authUser.findUnique({ where: { id } });
+  if (!targetUser || targetUser.deletedAt) {
+    res.status(404).json({ error: "User not found" });
+    return;
+  }
+
+  if (targetUser.role === Role.ADMIN) {
+    res.status(403).json({ error: "Admin users cannot be deleted" });
+    return;
+  }
+
+  await db.authUser.update({
+    where: { id },
+    data: {
+      deletedAt: new Date(),
+      // Frees up the original email for reuse — the email column has a hard unique
+      // constraint, so a soft-deleted row would otherwise permanently block anyone
+      // (including a newly created user) from ever using this address again.
+      email: `deleted+${targetUser.id}+${targetUser.email}`,
+    },
+  });
+
+  // Revoke any active sessions immediately — better-auth's own session-check
+  // endpoints (used by the client's useSession()) validate purely against the
+  // session table and don't know about deletedAt, so a deleted user's already
+  // logged-in browser would otherwise stay logged in until the session's natural
+  // expiry.
+  await db.authSession.deleteMany({ where: { userId: id } });
+
+  res.status(204).send();
 });

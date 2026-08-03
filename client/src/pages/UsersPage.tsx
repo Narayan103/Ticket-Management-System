@@ -5,11 +5,13 @@ import { apiClient } from '@/lib/api-client'
 import { Button } from '@/components/ui/button'
 import CreateUserModal from '@/components/CreateUserModal'
 import EditUserModal from '@/components/EditUserModal'
+import DeleteUserModal from '@/components/DeleteUserModal'
 import UsersTable, { type User } from '@/components/UsersTable'
 
 function UsersPage() {
   const [createUserOpen, setCreateUserOpen] = useState(false)
   const [editingUser, setEditingUser] = useState<User | null>(null)
+  const [deletingUser, setDeletingUser] = useState<User | null>(null)
   const { data: users = [], isPending, error } = useQuery({
     queryKey: ['users'],
     queryFn: () => apiClient.get<{ users: User[] }>('/api/users').then((res) => res.data.users),
@@ -29,9 +31,12 @@ function UsersPage() {
       </div>
 
       {errorMessage && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>}
-      {!errorMessage && <UsersTable users={users} isPending={isPending} onEditUser={setEditingUser} />}
+      {!errorMessage && (
+        <UsersTable users={users} isPending={isPending} onEditUser={setEditingUser} onDeleteUser={setDeletingUser} />
+      )}
       <CreateUserModal open={createUserOpen} onOpenChange={setCreateUserOpen} />
       <EditUserModal user={editingUser} onOpenChange={(open) => { if (!open) setEditingUser(null) }} />
+      <DeleteUserModal user={deletingUser} onOpenChange={(open) => { if (!open) setDeletingUser(null) }} />
     </main>
   )
 }

@@ -71,19 +71,26 @@ test.describe("Edit User modal", () => {
     await page.getByRole("button", { name: `Edit ${user.name}` }).click();
   }
 
+  // The prefill check and the three validation tests below never cause a PUT request to reach
+  // the server (validation blocks submission client-side, and the prefill test doesn't submit
+  // at all), so they can't mutate anything — there's no need to spin up a disposable user via
+  // createTestUser for them. They target the already-logged-in ADMIN_USER's own row instead,
+  // which both avoids unnecessary cleanup and reduces how many extra rows this file creates
+  // concurrently (fullyParallel + multiple spec files hitting the same test DB means every
+  // extra created-then-deleted row is a small chance of transiently tripping
+  // users-list.spec.ts's exact-row-count assertion elsewhere in the suite).
+
   test("edit button opens the dialog pre-filled with the user's current name/email and an empty password", async ({
     page,
   }) => {
     await loginViaUi(page, ADMIN_USER);
-    const user = await createTestUser(page, { label: "prefill" });
-
-    await openEditDialog(page, user);
+    await openEditDialog(page, ADMIN_USER);
 
     const dialog = page.getByRole("dialog");
     await expect(dialog).toBeVisible();
     await expect(dialog.getByRole("heading", { name: "Edit User" })).toBeVisible();
-    await expect(dialog.getByLabel("Name")).toHaveValue(user.name);
-    await expect(dialog.getByLabel("Email")).toHaveValue(user.email);
+    await expect(dialog.getByLabel("Name")).toHaveValue(ADMIN_USER.name);
+    await expect(dialog.getByLabel("Email")).toHaveValue(ADMIN_USER.email);
     await expect(dialog.getByLabel("New Password")).toHaveValue("");
   });
 
@@ -94,8 +101,7 @@ test.describe("Edit User modal", () => {
     });
 
     await loginViaUi(page, ADMIN_USER);
-    const user = await createTestUser(page, { label: "short-name" });
-    await openEditDialog(page, user);
+    await openEditDialog(page, ADMIN_USER);
 
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Name").fill("Al");
@@ -113,8 +119,7 @@ test.describe("Edit User modal", () => {
     });
 
     await loginViaUi(page, ADMIN_USER);
-    const user = await createTestUser(page, { label: "bad-email" });
-    await openEditDialog(page, user);
+    await openEditDialog(page, ADMIN_USER);
 
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("Email").fill("not-an-email");
@@ -134,8 +139,7 @@ test.describe("Edit User modal", () => {
     });
 
     await loginViaUi(page, ADMIN_USER);
-    const user = await createTestUser(page, { label: "short-password" });
-    await openEditDialog(page, user);
+    await openEditDialog(page, ADMIN_USER);
 
     const dialog = page.getByRole("dialog");
     await dialog.getByLabel("New Password").fill("short1");

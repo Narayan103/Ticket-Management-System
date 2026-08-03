@@ -24,6 +24,19 @@ export const auth = betterAuth({
       },
     },
   },
+  databaseHooks: {
+    session: {
+      create: {
+        before: async (session) => {
+          const user = await db.authUser.findUnique({
+            where: { id: session.userId },
+            select: { deletedAt: true },
+          });
+          if (user?.deletedAt) return false;
+        },
+      },
+    },
+  },
   session: { modelName: "authSession" },
   account: { modelName: "authAccount" },
   verification: { modelName: "authVerification" },

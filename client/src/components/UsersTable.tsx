@@ -1,4 +1,4 @@
-import { PencilIcon } from 'lucide-react'
+import { PencilIcon, Trash2Icon } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
@@ -6,9 +6,14 @@ import { Role } from '@/types/role'
 
 export type User = { id: string; name: string; email: string; role: Role; createdAt: string }
 
-type UsersTableProps = { users: User[]; isPending: boolean; onEditUser: (user: User) => void }
+type UsersTableProps = {
+  users: User[]
+  isPending: boolean
+  onEditUser: (user: User) => void
+  onDeleteUser: (user: User) => void
+}
 
-function UsersTable({ users, isPending, onEditUser }: UsersTableProps) {
+function UsersTable({ users, isPending, onEditUser, onDeleteUser }: UsersTableProps) {
   if (isPending) {
     return (
       <Table className="mt-6">
@@ -83,14 +88,26 @@ function UsersTable({ users, isPending, onEditUser }: UsersTableProps) {
             </TableCell>
             <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
             <TableCell>
-              <Button
-                variant="ghost"
-                size="icon-sm"
-                aria-label={`Edit ${user.name}`}
-                onClick={() => onEditUser(user)}
-              >
-                <PencilIcon />
-              </Button>
+              <div className="flex gap-1">
+                <Button
+                  variant="ghost"
+                  size="icon-sm"
+                  aria-label={`Edit ${user.name}`}
+                  onClick={() => onEditUser(user)}
+                >
+                  <PencilIcon />
+                </Button>
+                <Button
+                  variant="destructive"
+                  size="icon-sm"
+                  aria-label={`Delete ${user.name}`}
+                  title={user.role === Role.ADMIN ? 'Admin users cannot be deleted' : undefined}
+                  disabled={user.role === Role.ADMIN}
+                  onClick={() => onDeleteUser(user)}
+                >
+                  <Trash2Icon />
+                </Button>
+              </div>
             </TableCell>
           </TableRow>
         ))}

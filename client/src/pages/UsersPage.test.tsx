@@ -19,10 +19,29 @@ const FAKE_EDIT_USER: User = {
   createdAt: '2024-01-01T00:00:00.000Z',
 }
 
+const FAKE_DELETE_USER: User = {
+  id: 'fake-2',
+  name: 'Another Fake User',
+  email: 'fake2@example.com',
+  role: Role.AGENT,
+  createdAt: '2024-01-02T00:00:00.000Z',
+}
+
 vi.mock('@/components/UsersTable', () => ({
-  default: ({ users, isPending, onEditUser }: { users: User[]; isPending: boolean; onEditUser: (user: User) => void }) => (
+  default: ({
+    users,
+    isPending,
+    onEditUser,
+    onDeleteUser,
+  }: {
+    users: User[]
+    isPending: boolean
+    onEditUser: (user: User) => void
+    onDeleteUser: (user: User) => void
+  }) => (
     <div data-testid="users-table" data-pending={isPending} data-count={users.length}>
       <button onClick={() => onEditUser(FAKE_EDIT_USER)}>Mock Edit Trigger</button>
+      <button onClick={() => onDeleteUser(FAKE_DELETE_USER)}>Mock Delete Trigger</button>
     </div>
   ),
 }))
@@ -30,6 +49,12 @@ vi.mock('@/components/UsersTable', () => ({
 vi.mock('@/components/EditUserModal', () => ({
   default: ({ user, onOpenChange }: { user: User | null; onOpenChange: (open: boolean) => void }) => (
     <div data-testid="edit-user-modal" data-user-id={user?.id ?? ''} onClick={() => onOpenChange(false)} />
+  ),
+}))
+
+vi.mock('@/components/DeleteUserModal', () => ({
+  default: ({ user, onOpenChange }: { user: User | null; onOpenChange: (open: boolean) => void }) => (
+    <div data-testid="delete-user-modal" data-user-id={user?.id ?? ''} onClick={() => onOpenChange(false)} />
   ),
 }))
 
@@ -164,5 +189,32 @@ describe('UsersPage', () => {
     await user.click(screen.getByTestId('edit-user-modal'))
 
     expect(screen.getByTestId('edit-user-modal')).toHaveAttribute('data-user-id', '')
+  })
+
+  it('opens the delete user modal with the selected user when UsersTable triggers onDeleteUser', async () => {
+    mockedGet.mockReturnValue(new Promise(() => {}))
+    const user = userEvent.setup()
+
+    renderUsersPage()
+
+    expect(screen.getByTestId('delete-user-modal')).toHaveAttribute('data-user-id', '')
+
+    await user.click(screen.getByRole('button', { name: 'Mock Delete Trigger' }))
+
+    expect(screen.getByTestId('delete-user-modal')).toHaveAttribute('data-user-id', 'fake-2')
+  })
+
+  it('clears the deleting user when the delete modal is closed', async () => {
+    mockedGet.mockReturnValue(new Promise(() => {}))
+    const user = userEvent.setup()
+
+    renderUsersPage()
+
+    await user.click(screen.getByRole('button', { name: 'Mock Delete Trigger' }))
+    expect(screen.getByTestId('delete-user-modal')).toHaveAttribute('data-user-id', 'fake-2')
+
+    await user.click(screen.getByTestId('delete-user-modal'))
+
+    expect(screen.getByTestId('delete-user-modal')).toHaveAttribute('data-user-id', '')
   })
 })

@@ -6,14 +6,14 @@ import { Role } from '@/types/role'
 
 describe('UsersTable', () => {
   it('shows a loading skeleton when pending', () => {
-    const { container } = render(<UsersTable users={[]} isPending={true} onEditUser={vi.fn()} />)
+    const { container } = render(<UsersTable users={[]} isPending={true} onEditUser={vi.fn()} onDeleteUser={vi.fn()} />)
 
     expect(screen.getByRole('table')).toBeInTheDocument()
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0)
   })
 
   it('shows an empty state when there are no users', () => {
-    render(<UsersTable users={[]} isPending={false} onEditUser={vi.fn()} />)
+    render(<UsersTable users={[]} isPending={false} onEditUser={vi.fn()} onDeleteUser={vi.fn()} />)
 
     expect(screen.getByText('No users found.')).toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
@@ -24,6 +24,7 @@ describe('UsersTable', () => {
       <UsersTable
         isPending={false}
         onEditUser={vi.fn()}
+        onDeleteUser={vi.fn()}
         users={[
           { id: '1', name: 'Ada Lovelace', email: 'ada@example.com', role: Role.ADMIN, createdAt: '2024-01-15T00:00:00.000Z' },
           { id: '2', name: 'Grace Hopper', email: 'grace@example.com', role: Role.AGENT, createdAt: '2024-02-20T00:00:00.000Z' },
@@ -46,7 +47,7 @@ describe('UsersTable', () => {
     const ada = { id: '1', name: 'Ada Lovelace', email: 'ada@example.com', role: Role.ADMIN, createdAt: '2024-01-15T00:00:00.000Z' }
     const grace = { id: '2', name: 'Grace Hopper', email: 'grace@example.com', role: Role.AGENT, createdAt: '2024-02-20T00:00:00.000Z' }
 
-    render(<UsersTable isPending={false} onEditUser={onEditUser} users={[ada, grace]} />)
+    render(<UsersTable isPending={false} onEditUser={onEditUser} onDeleteUser={vi.fn()} users={[ada, grace]} />)
 
     expect(screen.getByRole('button', { name: 'Edit Ada Lovelace' })).toBeInTheDocument()
     expect(screen.getByRole('button', { name: 'Edit Grace Hopper' })).toBeInTheDocument()
@@ -54,5 +55,21 @@ describe('UsersTable', () => {
     await user.click(screen.getByRole('button', { name: 'Edit Grace Hopper' }))
 
     expect(onEditUser).toHaveBeenCalledWith(grace)
+  })
+
+  it('renders a delete button per row, disabled for ADMIN, and calls onDeleteUser with that row\'s user when clicked', async () => {
+    const user = userEvent.setup()
+    const onDeleteUser = vi.fn()
+    const ada = { id: '1', name: 'Ada Lovelace', email: 'ada@example.com', role: Role.ADMIN, createdAt: '2024-01-15T00:00:00.000Z' }
+    const grace = { id: '2', name: 'Grace Hopper', email: 'grace@example.com', role: Role.AGENT, createdAt: '2024-02-20T00:00:00.000Z' }
+
+    render(<UsersTable isPending={false} onEditUser={vi.fn()} onDeleteUser={onDeleteUser} users={[ada, grace]} />)
+
+    expect(screen.getByRole('button', { name: 'Delete Ada Lovelace' })).toBeDisabled()
+    expect(screen.getByRole('button', { name: 'Delete Grace Hopper' })).toBeEnabled()
+
+    await user.click(screen.getByRole('button', { name: 'Delete Grace Hopper' }))
+
+    expect(onDeleteUser).toHaveBeenCalledWith(grace)
   })
 })

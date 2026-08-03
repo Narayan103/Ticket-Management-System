@@ -1,9 +1,10 @@
 import { Client } from "pg";
 
-// Used only to clean up users created through the "Create User" flow in
-// create-user.spec.ts. There's no DELETE /api/users route (out of scope for this feature),
-// and this suite's DB is never dropped/recreated between runs (setup-test-db.ts only creates
-// it if missing and applies migrations) — so tests that create real rows must delete them
+// Used to clean up users created (and, since delete-user.spec.ts, soft-deleted) by these
+// tests. This is a hard delete straight against the test DB, deliberately bypassing the
+// DELETE /api/users/:id route (which only sets deletedAt and rewrites the email) - and this
+// suite's DB is never dropped/recreated between runs (setup-test-db.ts only creates it if
+// missing and applies migrations) — so tests that create real rows must delete them
 // themselves, or repeated runs would collide on the unique `email` constraint and
 // users-list.spec.ts's exact-row-count assertion would flake against leftover data.
 const testDatabaseUrl = process.env.TEST_DATABASE_URL;
