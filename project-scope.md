@@ -11,6 +11,7 @@ Build a ticket management system that uses AI to automatically classify, respond
 ## Features
 
 - Receive support emails and create tickets
+- Customer self-service portal — customers can sign up, log in, and create/view their own tickets directly (in addition to tickets arriving by email)
 - Auto-generate human-friendly responses using a knowledge base
 - Ticket list with filtering and sorting
 - Ticket detail view
@@ -36,3 +37,4 @@ Build a ticket management system that uses AI to automatically classify, respond
 
 - **Admin**: Deployed with the system. Can create and manage agents.
 - **Agent**: Created by admin. Can view and manage tickets.
+- **Customer**: Self-registers (the only role that can sign up). Can create tickets and view/track only their own tickets — no access to other customers' tickets or any admin/agent tooling.
