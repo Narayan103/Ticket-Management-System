@@ -1,6 +1,7 @@
 import type { Request, Response, NextFunction } from "express";
 import { fromNodeHeaders } from "better-auth/node";
 import { auth } from "./auth";
+import { Role } from "./types/role";
 
 export async function requireAuth(req: Request, res: Response, next: NextFunction) {
   const result = await auth.api.getSession({ headers: fromNodeHeaders(req.headers) });
@@ -10,5 +11,13 @@ export async function requireAuth(req: Request, res: Response, next: NextFunctio
   }
   req.session = result.session;
   req.user = result.user;
+  next();
+}
+
+export function requireAdmin(req: Request, res: Response, next: NextFunction) {
+  if (req.user?.role !== Role.ADMIN) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
   next();
 }

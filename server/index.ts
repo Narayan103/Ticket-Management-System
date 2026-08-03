@@ -3,7 +3,7 @@ import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
 import { CLIENT_URL } from "./env";
-import { requireAuth } from "./require-auth";
+import { requireAuth, requireAdmin } from "./require-auth";
 import { db } from "./db";
 
 const app = express();
@@ -22,6 +22,14 @@ app.use(express.json());
 
 app.get("/api/me", requireAuth, (req, res) => {
   res.json({ user: req.user, session: { expiresAt: req.session!.expiresAt } });
+});
+
+app.get("/api/users", requireAuth, requireAdmin, async (_req, res) => {
+  const users = await db.authUser.findMany({
+    select: { id: true, name: true, email: true, role: true, createdAt: true },
+    orderBy: { name: "asc" },
+  });
+  res.json({ users });
 });
 
 app.get("/api/health", async (_req, res) => {
