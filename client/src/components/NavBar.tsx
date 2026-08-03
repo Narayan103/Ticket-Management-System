@@ -12,9 +12,9 @@ function NavBar() {
   return (
     <header className="flex items-center justify-between border-b border-neutral-200 px-6 py-4 dark:border-neutral-700">
       <div className="flex items-center gap-6">
-        <span className="font-semibold text-purple-600 dark:text-purple-400">
+        <Link to="/" className="font-semibold text-purple-600 dark:text-purple-400">
           Ticket Management
-        </span>
+        </Link>
         {session?.user.role === 'ADMIN' && (
           <Link
             to="/users"

@@ -2,6 +2,7 @@ import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { apiClient } from '@/lib/api-client'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Skeleton } from '@/components/ui/skeleton'
 
 type User = { id: string; name: string; email: string; role: 'ADMIN' | 'AGENT'; createdAt: string }
 
@@ -23,7 +24,34 @@ function UsersPage() {
 
       {errorMessage && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>}
       {!errorMessage && isPending && (
-        <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">Loading users…</p>
+        <Table className="mt-6">
+          <TableHeader>
+            <TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Email</TableHead>
+              <TableHead>Role</TableHead>
+              <TableHead>Joined</TableHead>
+            </TableRow>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <TableRow key={i}>
+                <TableCell>
+                  <Skeleton className="h-4 w-32" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-48" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-16" />
+                </TableCell>
+                <TableCell>
+                  <Skeleton className="h-4 w-24" />
+                </TableCell>
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
       )}
       {!errorMessage && !isPending && users.length === 0 && (
         <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">No users found.</p>
