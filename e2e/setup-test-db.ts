@@ -40,3 +40,21 @@ await new Promise<void>((resolve, reject) => {
 });
 
 console.log("Test database schema is up to date.");
+
+// Seed the fixed E2E test accounts (ADMIN + AGENT). There's no self-registration
+// (disableSignUp: true), so tests need real, pre-existing credentials to sign in with.
+// Runs with cwd = server/ so it resolves server's node_modules/generated Prisma client,
+// same as the `prisma migrate deploy` invocation above.
+await new Promise<void>((resolve, reject) => {
+  const child = spawn("bun", ["../e2e/seed-test-users.ts"], {
+    cwd: serverDir,
+    env: { ...process.env, DATABASE_URL: testDatabaseUrl },
+    stdio: "inherit",
+    shell: true,
+  });
+  child.on("exit", (code) =>
+    code === 0 ? resolve() : reject(new Error(`seed-test-users.ts exited with code ${code}`)),
+  );
+});
+
+console.log("Test database seeded with E2E test accounts.");
