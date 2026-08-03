@@ -12,6 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Before writing or changing code that touches Bun, Express, React, or Vite APIs, use the `context7` MCP server (`resolve-library-id` then `query-docs`) to pull current documentation rather than relying on training data — this stack (especially Bun) moves fast enough that remembered APIs/flags can be stale or wrong.
 
+## Writing E2E tests
+
+Use the `e2e-test-writer` agent (`.claude/agents/e2e-test-writer.md`) to write or update Playwright end-to-end tests, rather than writing them directly — it has this project's testing setup and conventions (test database, `webServer` config, auth flow, role-gating patterns) built in. Delegate to it proactively whenever a user-facing feature (a new page, route, form, or auth/role-gated flow) is added or changed, not just when explicitly asked for tests.
+
 ## Commands
 
 This is not a workspace/monorepo — `client/` and `server/` are two independent Bun projects, each with its own `package.json` and lockfile. Run commands from inside the respective directory.
@@ -34,15 +38,7 @@ bun run lint      # oxlint
 bun run preview   # preview production build
 ```
 
-**E2E** (`e2e/`) — a third independent Bun project, Playwright driving both `client/` and `server/`:
-```bash
-bun install
-cp .env.example .env    # set TEST_DATABASE_URL, SERVER_PORT, CLIENT_PORT
-bun run test             # playwright test — sets up the test DB, then boots server (port 3002) + client (port 4300) itself
-bun run test:ui          # playwright test --ui
-```
-No test files exist yet — `e2e/tests/` is currently empty (`.gitkeep` only). The point of this project is that it runs against its own Postgres database (`ticket_management_test` by default), never the dev `ticket_management` database, so tests can freely create/mutate/delete data without touching real dev state. `playwright.config.ts`'s `webServer` array starts `server/` with `DATABASE_URL`/`PORT`/`CLIENT_URL` overridden to the test values (everything else, e.g. `BETTER_AUTH_SECRET`, still comes from `server/.env`) and `client/` with `VITE_API_URL` pointed at the test server — both torn down automatically after the run.
-- The server's `webServer.command` is `bun ../e2e/setup-test-db.ts && bun run start`, **not** a Playwright `globalSetup` file — `webServer` startup and `globalSetup` are not guaranteed to run in order (confirmed: they raced, and the server tried to query the test DB before it existed). Chaining the DB setup into the command itself guarantees it runs to completion first. `setup-test-db.ts` creates `ticket_management_test` if missing and runs `prisma migrate deploy` against it — idempotent, safe to run on every test invocation.
+E2E testing (`e2e/`, Playwright) setup/commands are documented in the `e2e-test-writer` agent, not here — see "Writing E2E tests" above.
 
 ## Architecture
 
