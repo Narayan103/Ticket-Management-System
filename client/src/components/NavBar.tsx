@@ -1,4 +1,4 @@
-import { useNavigate } from 'react-router-dom'
+import { Link, useNavigate } from 'react-router-dom'
 import { signOut, useSession } from '../lib/auth-client'
 
 function NavBar() {
@@ -11,9 +11,19 @@ function NavBar() {
 
   return (
     <header className="flex items-center justify-between border-b border-neutral-200 px-6 py-4 dark:border-neutral-700">
-      <span className="font-semibold text-purple-600 dark:text-purple-400">
-        Ticket Management
-      </span>
+      <div className="flex items-center gap-6">
+        <span className="font-semibold text-purple-600 dark:text-purple-400">
+          Ticket Management
+        </span>
+        {session?.user.role === 'ADMIN' && (
+          <Link
+            to="/users"
+            className="text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+          >
+            Users
+          </Link>
+        )}
+      </div>
       <div className="flex items-center gap-3">
         <div className="flex items-center gap-2">
           <span className="flex h-7 w-7 items-center justify-center rounded-full bg-purple-600 text-sm font-medium text-white">
