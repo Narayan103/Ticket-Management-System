@@ -1,12 +1,14 @@
+import { PencilIcon } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import { Role } from '@/types/role'
 
 export type User = { id: string; name: string; email: string; role: Role; createdAt: string }
 
-type UsersTableProps = { users: User[]; isPending: boolean }
+type UsersTableProps = { users: User[]; isPending: boolean; onEditUser: (user: User) => void }
 
-function UsersTable({ users, isPending }: UsersTableProps) {
+function UsersTable({ users, isPending, onEditUser }: UsersTableProps) {
   if (isPending) {
     return (
       <Table className="mt-6">
@@ -16,6 +18,9 @@ function UsersTable({ users, isPending }: UsersTableProps) {
             <TableHead>Email</TableHead>
             <TableHead>Role</TableHead>
             <TableHead>Joined</TableHead>
+            <TableHead className="w-px">
+              <span className="sr-only">Actions</span>
+            </TableHead>
           </TableRow>
         </TableHeader>
         <TableBody>
@@ -32,6 +37,9 @@ function UsersTable({ users, isPending }: UsersTableProps) {
               </TableCell>
               <TableCell>
                 <Skeleton className="h-4 w-24" />
+              </TableCell>
+              <TableCell>
+                <Skeleton className="h-4 w-8" />
               </TableCell>
             </TableRow>
           ))}
@@ -52,6 +60,9 @@ function UsersTable({ users, isPending }: UsersTableProps) {
           <TableHead>Email</TableHead>
           <TableHead>Role</TableHead>
           <TableHead>Joined</TableHead>
+          <TableHead className="w-px">
+            <span className="sr-only">Actions</span>
+          </TableHead>
         </TableRow>
       </TableHeader>
       <TableBody>
@@ -71,6 +82,16 @@ function UsersTable({ users, isPending }: UsersTableProps) {
               </span>
             </TableCell>
             <TableCell>{new Date(user.createdAt).toLocaleDateString()}</TableCell>
+            <TableCell>
+              <Button
+                variant="ghost"
+                size="icon-sm"
+                aria-label={`Edit ${user.name}`}
+                onClick={() => onEditUser(user)}
+              >
+                <PencilIcon />
+              </Button>
+            </TableCell>
           </TableRow>
         ))}
       </TableBody>

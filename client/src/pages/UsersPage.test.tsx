@@ -4,15 +4,32 @@ import userEvent from '@testing-library/user-event'
 import { apiClient } from '@/lib/api-client'
 import { renderWithQuery } from '@/test-utils'
 import UsersPage from './UsersPage'
+import { Role } from '@/types/role'
 import type { User } from '@/components/UsersTable'
 
 vi.mock('@/lib/api-client', () => ({
   apiClient: { get: vi.fn() },
 }))
 
+const FAKE_EDIT_USER: User = {
+  id: 'fake-1',
+  name: 'Fake User',
+  email: 'fake@example.com',
+  role: Role.AGENT,
+  createdAt: '2024-01-01T00:00:00.000Z',
+}
+
 vi.mock('@/components/UsersTable', () => ({
-  default: ({ users, isPending }: { users: User[]; isPending: boolean }) => (
-    <div data-testid="users-table" data-pending={isPending} data-count={users.length} />
+  default: ({ users, isPending, onEditUser }: { users: User[]; isPending: boolean; onEditUser: (user: User) => void }) => (
+    <div data-testid="users-table" data-pending={isPending} data-count={users.length}>
+      <button onClick={() => onEditUser(FAKE_EDIT_USER)}>Mock Edit Trigger</button>
+    </div>
+  ),
+}))
+
+vi.mock('@/components/EditUserModal', () => ({
+  default: ({ user, onOpenChange }: { user: User | null; onOpenChange: (open: boolean) => void }) => (
+    <div data-testid="edit-user-modal" data-user-id={user?.id ?? ''} onClick={() => onOpenChange(false)} />
   ),
 }))
 
@@ -120,5 +137,32 @@ describe('UsersPage', () => {
     await waitFor(() => {
       expect(screen.queryByRole('dialog')).not.toBeInTheDocument()
     })
+  })
+
+  it('opens the edit user modal with the selected user when UsersTable triggers onEditUser', async () => {
+    mockedGet.mockReturnValue(new Promise(() => {}))
+    const user = userEvent.setup()
+
+    renderUsersPage()
+
+    expect(screen.getByTestId('edit-user-modal')).toHaveAttribute('data-user-id', '')
+
+    await user.click(screen.getByRole('button', { name: 'Mock Edit Trigger' }))
+
+    expect(screen.getByTestId('edit-user-modal')).toHaveAttribute('data-user-id', 'fake-1')
+  })
+
+  it('clears the editing user when the edit modal is closed', async () => {
+    mockedGet.mockReturnValue(new Promise(() => {}))
+    const user = userEvent.setup()
+
+    renderUsersPage()
+
+    await user.click(screen.getByRole('button', { name: 'Mock Edit Trigger' }))
+    expect(screen.getByTestId('edit-user-modal')).toHaveAttribute('data-user-id', 'fake-1')
+
+    await user.click(screen.getByTestId('edit-user-modal'))
+
+    expect(screen.getByTestId('edit-user-modal')).toHaveAttribute('data-user-id', '')
   })
 })
