@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import { toNodeHandler } from "better-auth/node";
 import { auth } from "./auth";
+import { CLIENT_URL } from "./env";
 import { requireAuth } from "./require-auth";
 import { db } from "./db";
 
@@ -10,7 +11,7 @@ const port = process.env.PORT ? Number(process.env.PORT) : 3001;
 
 app.use(
   cors({
-    origin: process.env.CLIENT_URL ?? "http://localhost:5173",
+    origin: CLIENT_URL,
     credentials: true,
   }),
 );
@@ -20,7 +21,7 @@ app.all("/api/auth/*splat", toNodeHandler(auth));
 app.use(express.json());
 
 app.get("/api/me", requireAuth, (req, res) => {
-  res.json({ session: req.session, user: req.user });
+  res.json({ user: req.user, session: { expiresAt: req.session!.expiresAt } });
 });
 
 app.get("/api/health", async (_req, res) => {
