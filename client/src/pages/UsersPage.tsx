@@ -1,12 +1,17 @@
+import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import axios from 'axios'
 import { apiClient } from '@/lib/api-client'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
+import CreateUserModal from '@/components/CreateUserModal'
+import { Role } from '@/types/role'
 
-type User = { id: string; name: string; email: string; role: 'ADMIN' | 'AGENT'; createdAt: string }
+type User = { id: string; name: string; email: string; role: Role; createdAt: string }
 
 function UsersPage() {
+  const [createUserOpen, setCreateUserOpen] = useState(false)
   const { data: users = [], isPending, error } = useQuery({
     queryKey: ['users'],
     queryFn: () => apiClient.get<{ users: User[] }>('/api/users').then((res) => res.data.users),
@@ -20,7 +25,10 @@ function UsersPage() {
 
   return (
     <main className="mx-auto max-w-3xl px-6 py-12">
-      <h1 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-50">Users</h1>
+      <div className="flex items-center justify-between">
+        <h1 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-50">Users</h1>
+        <Button onClick={() => setCreateUserOpen(true)}>Create User</Button>
+      </div>
 
       {errorMessage && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>}
       {!errorMessage && isPending && (
@@ -74,7 +82,7 @@ function UsersPage() {
                 <TableCell>
                   <span
                     className={
-                      user.role === 'ADMIN'
+                      user.role === Role.ADMIN
                         ? 'font-medium text-purple-600 dark:text-purple-400'
                         : 'text-neutral-700 dark:text-neutral-300'
                     }
@@ -88,6 +96,7 @@ function UsersPage() {
           </TableBody>
         </Table>
       )}
+      <CreateUserModal open={createUserOpen} onOpenChange={setCreateUserOpen} />
     </main>
   )
 }

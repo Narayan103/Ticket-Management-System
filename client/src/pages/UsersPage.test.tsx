@@ -1,11 +1,18 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { apiClient } from '@/lib/api-client'
 import { renderWithQuery } from '@/test-utils'
 import UsersPage from './UsersPage'
 
 vi.mock('@/lib/api-client', () => ({
   apiClient: { get: vi.fn() },
+}))
+
+vi.mock('@/components/CreateUserModal', () => ({
+  default: ({ open }: { open: boolean; onOpenChange: (open: boolean) => void }) => (
+    <div data-testid="create-user-modal" data-open={open} />
+  ),
 }))
 
 const mockedGet = vi.mocked(apiClient.get)
@@ -76,5 +83,26 @@ describe('UsersPage', () => {
     renderUsersPage()
 
     expect(await screen.findByText('Not authorized')).toBeInTheDocument()
+  })
+
+  it('shows a Create User button above the list', () => {
+    mockedGet.mockReturnValue(new Promise(() => {}))
+
+    renderUsersPage()
+
+    expect(screen.getByRole('button', { name: 'Create User' })).toBeInTheDocument()
+  })
+
+  it('opens the create user modal when the button is clicked', async () => {
+    mockedGet.mockReturnValue(new Promise(() => {}))
+    const user = userEvent.setup()
+
+    renderUsersPage()
+
+    expect(screen.getByTestId('create-user-modal')).toHaveAttribute('data-open', 'false')
+
+    await user.click(screen.getByRole('button', { name: 'Create User' }))
+
+    expect(screen.getByTestId('create-user-modal')).toHaveAttribute('data-open', 'true')
   })
 })

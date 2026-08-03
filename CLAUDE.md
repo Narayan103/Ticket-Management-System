@@ -26,6 +26,28 @@ Client component tests use **Vitest** + **React Testing Library**, configured in
 - Because `globals: true` is set, `describe`/`it`/`expect`/`vi` don't need importing, but this codebase imports them explicitly from `vitest` anyway for clarity — follow that convention.
 - Run with `bun run test` (single run) or `bun run test:watch` (watch mode) from `client/`.
 
+## Role enum
+
+Both projects define a `Role` type/value for `'ADMIN' | 'AGENT'` and code should reference it instead of the raw string literals — don't write `'ADMIN'`/`'AGENT'` inline in comparisons or type annotations outside these definitions.
+
+- **Server**: `server/types/role.ts` — a real TS `enum Role { ADMIN = "ADMIN", AGENT = "AGENT" }`. Used e.g. in `server/index.ts` (`role: Role.AGENT` when creating a user) and `server/require-auth.ts` (`requireAdmin`'s `req.user?.role !== Role.ADMIN` check).
+- **Client**: `client/src/types/role.ts` — **not** a TS `enum`. The client's `tsconfig.app.json`/`tsconfig.node.json` set `erasableSyntaxOnly: true` (Vite transpiles each file independently and can't erase real `enum` declarations, which emit runtime object code), so `enum` syntax fails to build there. Use the const-object + derived-type pattern instead:
+  ```ts
+  export const Role = { ADMIN: "ADMIN", AGENT: "AGENT" } as const
+  export type Role = (typeof Role)[keyof typeof Role]
+  ```
+  Call sites look identical either way (`Role.ADMIN`, `Role.AGENT`) — see `AdminLayout.tsx`, `NavBar.tsx`, `UsersPage.tsx`.
+- The two `Role` definitions are separate, hand-kept-in-sync values (not shared code) — `client/` and `server/` are independent projects, not a monorepo (see "Commands" below).
+
+## Data validation
+
+Use **zod** for validating request/form input on both sides — not manual type checks, regexes, or hand-rolled if-chains.
+
+- **Server**: define a `z.object({...})` schema next to the route (see `createUserSchema` and `POST /api/users` in `server/index.ts`) and validate with `schema.safeParse(req.body)`; on failure, respond `400` with `parsed.error.issues[0]?.message`. `zod` is a direct dependency of `server/` (added alongside this pattern) even though the backend has no other request-validation library.
+- **Client**: define the matching schema with `zodResolver` from `@hookform/resolvers/zod`, passed to `useForm`'s `resolver` option (see `client/src/components/CreateUserModal.tsx`), so react-hook-form surfaces the same messages inline via `FieldError`.
+- Client and server schemas are defined separately (not shared) since `client/` and `server/` are independent projects, not a monorepo — keep the validation rules in sync by hand when they need to match.
+- If a form field uses `<Input type="email">` (or any HTML5-validated input type), add `noValidate` to the `<form>` — otherwise the browser's native constraint validation intercepts submission before react-hook-form/zod ever runs, and your zod error message never appears.
+
 ## Commands
 
 This is not a workspace/monorepo — `client/` and `server/` are two independent Bun projects, each with its own `package.json` and lockfile. Run commands from inside the respective directory.
@@ -54,7 +76,7 @@ E2E testing (`e2e/`, Playwright) setup/commands are documented in the `e2e-test-
 
 ## Architecture
 
-- `server/index.ts` is the entire backend right now: a single Express app (run directly by the Bun runtime, no build step) with CORS enabled, JSON body parsing, one `/api/health` route, then a catch-all 404 handler and a centralized error-handling middleware at the bottom of the file. New routes should be added before those two catch-all handlers, and prefixed with `/api`.
+- `server/index.ts` sets up the Express app (run directly by the Bun runtime, no build step) — CORS, better-auth mounting, JSON body parsing, the standalone `/api/me` and `/api/health` routes, then a catch-all 404 handler and a centralized error-handling middleware at the bottom of the file. Resource-specific endpoints live in their own router modules under `server/routes/` (e.g. `server/routes/users.ts` exports `usersRouter`, mounted in `index.ts` via `app.use("/api/users", usersRouter)`) rather than being defined inline — follow that pattern for new resources (e.g. a future `server/routes/tickets.ts`) instead of adding more routes directly to `index.ts`. Router mounts must still go before the two catch-all handlers at the bottom of `index.ts`.
 - **Client data fetching**: use `axios` (via the shared `apiClient` instance in `client/src/lib/api-client.ts`, `baseURL: VITE_API_URL` falling back to `http://localhost:3001`, `withCredentials: true`) wrapped in **TanStack Query** (`@tanstack/react-query`) — `useQuery`/`useMutation`, never a raw `fetch()` or manual `useEffect`/`useState` fetch. `QueryClientProvider` is set up once in `client/src/main.tsx`. `UsersPage.tsx` is the reference example: `useQuery({ queryKey: [...], queryFn: () => apiClient.get(...).then(res => res.data) })`, with `axios.isAxiosError(error)` to extract the server's `{ error }` message on failure. Each project has its own `.env.example` documenting its expected env vars — copy to `.env` locally, don't commit `.env`.
 - Client and server run on different ports in dev (Vite picks 5173+ depending on availability, server defaults to 3001 via `PORT`), so the CORS setup in `server/index.ts` is required for the client to reach the API at all — don't remove it.
 - The client is a Vite `react-ts` template (oxlint for linting, Vitest + React Testing Library for component tests — see "Writing component tests") with `react-router-dom` added for routing (`client/src/App.tsx`), and shadcn/ui (`components.json`, `src/components/ui/`) installed with the default `base-nova` (Base UI, not Radix) theme — add components with `bunx shadcn@latest add <name>` from `client/`.

@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom'
 import { signOut, useSession } from '../lib/auth-client'
+import { Role } from '../types/role'
 
 function NavBar() {
   const { data: session } = useSession()
@@ -15,7 +16,7 @@ function NavBar() {
         <Link to="/" className="font-semibold text-purple-600 dark:text-purple-400">
           Ticket Management
         </Link>
-        {session?.user.role === 'ADMIN' && (
+        {session?.user.role === Role.ADMIN && (
           <Link
             to="/users"
             className="text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
