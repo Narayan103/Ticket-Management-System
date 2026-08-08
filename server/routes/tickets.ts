@@ -1,6 +1,6 @@
 import { Router } from "express";
-import { listTicketsQuerySchema, assignTicketSchema } from "core";
-import { requireAuth, requireAdmin } from "../require-auth";
+import { listTicketsQuerySchema, updateTicketSchema } from "core";
+import { requireAuth } from "../require-auth";
 import { db } from "../db";
 import { Role } from "../types/role";
 
@@ -97,19 +97,26 @@ ticketsRouter.get("/:id", requireAuth, async (req, res) => {
   res.json({ ticket });
 });
 
-ticketsRouter.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
+ticketsRouter.patch("/:id", requireAuth, async (req, res) => {
   const id = Number(req.params.id);
   if (!Number.isInteger(id)) {
     res.status(400).json({ error: "Invalid ticket id" });
     return;
   }
 
-  const parsed = assignTicketSchema.safeParse(req.body);
+  const parsed = updateTicketSchema.safeParse(req.body);
   if (!parsed.success) {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { assignedToId } = parsed.data;
+  const { status, category, assignedToId } = parsed.data;
+
+  // Only admins may (re)assign a ticket — status/category can be changed by any
+  // signed-in agent or admin, matching project-scope.md's "agents manage tickets".
+  if (assignedToId !== undefined && req.user?.role !== Role.ADMIN) {
+    res.status(403).json({ error: "Forbidden" });
+    return;
+  }
 
   const existing = await db.ticket.findUnique({ where: { id }, select: { id: true } });
   if (!existing) {
@@ -117,7 +124,7 @@ ticketsRouter.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
     return;
   }
 
-  if (assignedToId !== null) {
+  if (assignedToId !== undefined && assignedToId !== null) {
     const agent = await db.authUser.findUnique({ where: { id: assignedToId }, select: { deletedAt: true, role: true } });
     if (!agent || agent.deletedAt || agent.role !== Role.AGENT) {
       res.status(400).json({ error: "Assignee must be an active agent" });
@@ -127,7 +134,11 @@ ticketsRouter.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
 
   const ticket = await db.ticket.update({
     where: { id },
-    data: { assignedToId },
+    data: {
+      ...(status !== undefined ? { status } : {}),
+      ...(category !== undefined ? { category } : {}),
+      ...(assignedToId !== undefined ? { assignedToId } : {}),
+    },
     select: {
       id: true,
       subject: true,

@@ -78,6 +78,31 @@ describe('TicketDetailPage', () => {
     expect(mockedGet).toHaveBeenCalledWith('/api/tickets/1')
   })
 
+  it('shows editable status and category selects for a non-admin session (not admin-gated, unlike assignment)', async () => {
+    mockSession('AGENT')
+    mockedGet.mockResolvedValue({
+      data: {
+        ticket: {
+          id: 1,
+          subject: 'Cannot log in',
+          status: 'OPEN',
+          category: 'TECHNICAL_QUESTION',
+          fromEmail: 'a@example.com',
+          fromName: 'A Customer',
+          body: 'I cannot log in to my account.',
+          createdAt: '2024-01-15T00:00:00.000Z',
+          updatedAt: '2024-01-16T00:00:00.000Z',
+          assignedTo: null,
+        },
+      },
+    })
+
+    renderTicketDetailPage('1')
+
+    expect(await screen.findByRole('combobox', { name: 'Ticket status' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Ticket category' })).toBeInTheDocument()
+  })
+
   it('shows the assignee as plain text (no editable control) for a non-admin session', async () => {
     mockSession('AGENT')
     mockedGet.mockResolvedValue({

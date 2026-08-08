@@ -29,8 +29,14 @@ export const listTicketsQuerySchema = z.object({
 
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;
 
-export const assignTicketSchema = z.object({
-  assignedToId: z.string().nullable(),
-});
+export const updateTicketSchema = z
+  .object({
+    status: ticketStatusSchema.optional(),
+    category: ticketCategorySchema.nullable().optional(),
+    assignedToId: z.string().nullable().optional(),
+  })
+  .refine((data) => data.status !== undefined || data.category !== undefined || data.assignedToId !== undefined, {
+    message: "At least one of status, category, or assignedToId must be provided",
+  });
 
-export type AssignTicketInput = z.infer<typeof assignTicketSchema>;
+export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;

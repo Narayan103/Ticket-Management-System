@@ -5,7 +5,6 @@ import { apiClient } from '@/lib/api-client'
 import { useSession } from '@/lib/auth-client'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
-import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
@@ -28,7 +27,10 @@ type TicketDetail = {
   assignedTo: Agent | null
 }
 
+type TicketUpdate = { status: TicketStatus } | { category: TicketCategory | null } | { assignedToId: string | null }
+
 const UNASSIGNED = 'UNASSIGNED'
+const UNCLASSIFIED = 'UNCLASSIFIED'
 
 const STATUS_BADGE_STYLES: Record<TicketStatus, string> = {
   OPEN: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
@@ -57,8 +59,8 @@ function TicketDetailPage() {
     enabled: isAdmin,
   })
 
-  const assignMutation = useMutation({
-    mutationFn: (assignedToId: string | null) => apiClient.patch(`/api/tickets/${id}`, { assignedToId }),
+  const updateMutation = useMutation({
+    mutationFn: (data: TicketUpdate) => apiClient.patch(`/api/tickets/${id}`, data),
     onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', id] }),
   })
 
@@ -68,10 +70,10 @@ function TicketDetailPage() {
       : 'Failed to load ticket'
     : null
 
-  const assignErrorMessage = assignMutation.error
-    ? axios.isAxiosError(assignMutation.error)
-      ? (assignMutation.error.response?.data?.error ?? assignMutation.error.message)
-      : 'Failed to update assignee'
+  const updateErrorMessage = updateMutation.error
+    ? axios.isAxiosError(updateMutation.error)
+      ? (updateMutation.error.response?.data?.error ?? updateMutation.error.message)
+      : 'Failed to update ticket'
     : null
 
   return (
@@ -86,17 +88,18 @@ function TicketDetailPage() {
         <Card className="mt-4">
           <CardHeader>
             <Skeleton className="h-6 w-2/3" />
-            <Skeleton className="h-5 w-32" />
           </CardHeader>
-          <CardContent className="grid grid-cols-2 gap-2">
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-            <Skeleton className="h-4 w-full" />
-          </CardContent>
-          <Separator />
-          <CardContent>
-            <Skeleton className="h-16 w-full" />
+          <CardContent className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_1fr]">
+            <div className="space-y-3">
+              <Skeleton className="h-4 w-full" />
+              <Skeleton className="h-4 w-2/3" />
+              <Skeleton className="mt-4 h-16 w-full" />
+            </div>
+            <div className="space-y-4">
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+              <Skeleton className="h-8 w-full" />
+            </div>
           </CardContent>
         </Card>
       )}
@@ -105,59 +108,112 @@ function TicketDetailPage() {
         <Card className="mt-4">
           <CardHeader>
             <CardTitle className="text-xl">{ticket.subject}</CardTitle>
-            <div className="flex gap-1.5">
-              <Badge className={STATUS_BADGE_STYLES[ticket.status]}>{TICKET_STATUS_LABELS[ticket.status]}</Badge>
-              <Badge variant="secondary">
-                {ticket.category ? TICKET_CATEGORY_LABELS[ticket.category] : 'Unclassified'}
-              </Badge>
-            </div>
           </CardHeader>
 
-          <CardContent className="grid grid-cols-2 gap-y-1 text-sm text-muted-foreground">
+          <CardContent className="grid grid-cols-1 gap-6 lg:grid-cols-[3fr_1fr]">
             <div>
-              <span className="text-neutral-500 dark:text-neutral-500">From: </span>
-              {ticket.fromName} ({ticket.fromEmail})
+              <div className="space-y-1 text-sm text-muted-foreground">
+                <div>
+                  <span className="text-neutral-500 dark:text-neutral-500">From: </span>
+                  {ticket.fromName} ({ticket.fromEmail})
+                </div>
+                <div>
+                  <span className="text-neutral-500 dark:text-neutral-500">Created: </span>
+                  {formatDateTime(ticket.createdAt)}
+                </div>
+                <div>
+                  <span className="text-neutral-500 dark:text-neutral-500">Updated: </span>
+                  {formatDateTime(ticket.updatedAt)}
+                </div>
+              </div>
+
+              <Separator className="my-4" />
+
+              <div>
+                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Message</p>
+                <p className="text-xs text-neutral-500 dark:text-neutral-500">From {ticket.fromName}</p>
+                <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-900 dark:text-neutral-50">{ticket.body}</p>
+              </div>
             </div>
-            <div>
-              <span className="text-neutral-500 dark:text-neutral-500">Assigned to: </span>
-              {isAdmin ? (
+
+            <div className="space-y-4 lg:border-l lg:border-border lg:pl-6">
+              <div>
+                <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-500">Status</p>
                 <Select
-                  value={ticket.assignedTo?.id ?? UNASSIGNED}
-                  onValueChange={(value) => assignMutation.mutate(value === UNASSIGNED ? null : value)}
+                  value={ticket.status}
+                  onValueChange={(value) => updateMutation.mutate({ status: value as TicketStatus })}
                 >
-                  <SelectTrigger size="sm" aria-label="Assign to agent" disabled={assignMutation.isPending}>
-                    <SelectValue>{() => ticket.assignedTo?.name ?? 'Unassigned'}</SelectValue>
+                  <SelectTrigger
+                    className={`w-full ${STATUS_BADGE_STYLES[ticket.status]}`}
+                    aria-label="Ticket status"
+                    disabled={updateMutation.isPending}
+                  >
+                    <SelectValue>{() => TICKET_STATUS_LABELS[ticket.status]}</SelectValue>
                   </SelectTrigger>
                   <SelectContent>
-                    <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
-                    {agents.map((agent) => (
-                      <SelectItem key={agent.id} value={agent.id}>
-                        {agent.name}
+                    {Object.entries(TICKET_STATUS_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
                       </SelectItem>
                     ))}
                   </SelectContent>
                 </Select>
-              ) : (
-                ticket.assignedTo?.name ?? 'Unassigned'
-              )}
-              {assignErrorMessage && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{assignErrorMessage}</p>}
-            </div>
-            <div>
-              <span className="text-neutral-500 dark:text-neutral-500">Created: </span>
-              {formatDateTime(ticket.createdAt)}
-            </div>
-            <div>
-              <span className="text-neutral-500 dark:text-neutral-500">Updated: </span>
-              {formatDateTime(ticket.updatedAt)}
-            </div>
-          </CardContent>
+              </div>
 
-          <Separator />
+              <div>
+                <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-500">Category</p>
+                <Select
+                  value={ticket.category ?? UNCLASSIFIED}
+                  onValueChange={(value) =>
+                    updateMutation.mutate({ category: value === UNCLASSIFIED ? null : (value as TicketCategory) })
+                  }
+                >
+                  <SelectTrigger className="w-full" aria-label="Ticket category" disabled={updateMutation.isPending}>
+                    <SelectValue>
+                      {() => (ticket.category ? TICKET_CATEGORY_LABELS[ticket.category] : 'Unclassified')}
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNCLASSIFIED}>Unclassified</SelectItem>
+                    {Object.entries(TICKET_CATEGORY_LABELS).map(([value, label]) => (
+                      <SelectItem key={value} value={value}>
+                        {label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
 
-          <CardContent>
-            <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Message</p>
-            <p className="text-xs text-neutral-500 dark:text-neutral-500">From {ticket.fromName}</p>
-            <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-900 dark:text-neutral-50">{ticket.body}</p>
+              <div>
+                <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-500">Assigned to</p>
+                {isAdmin ? (
+                  <Select
+                    value={ticket.assignedTo?.id ?? UNASSIGNED}
+                    onValueChange={(value) =>
+                      updateMutation.mutate({ assignedToId: value === UNASSIGNED ? null : value })
+                    }
+                  >
+                    <SelectTrigger className="w-full" aria-label="Assign to agent" disabled={updateMutation.isPending}>
+                      <SelectValue>{() => ticket.assignedTo?.name ?? 'Unassigned'}</SelectValue>
+                    </SelectTrigger>
+                    <SelectContent>
+                      <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                      {agents.map((agent) => (
+                        <SelectItem key={agent.id} value={agent.id}>
+                          {agent.name}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+                ) : (
+                  <p className="text-sm text-neutral-900 dark:text-neutral-50">
+                    {ticket.assignedTo?.name ?? 'Unassigned'}
+                  </p>
+                )}
+              </div>
+
+              {updateErrorMessage && <p className="text-xs text-red-600 dark:text-red-400">{updateErrorMessage}</p>}
+            </div>
           </CardContent>
         </Card>
       )}
