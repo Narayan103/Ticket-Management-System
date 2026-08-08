@@ -11,6 +11,11 @@ if (!testDatabaseUrl) {
   throw new Error("TEST_DATABASE_URL must be set — copy e2e/.env.example to e2e/.env");
 }
 
+const inboundEmailWebhookSecret = process.env.INBOUND_EMAIL_WEBHOOK_SECRET;
+if (!inboundEmailWebhookSecret) {
+  throw new Error("INBOUND_EMAIL_WEBHOOK_SECRET must be set — copy e2e/.env.example to e2e/.env");
+}
+
 export default defineConfig({
   testDir: "./tests",
   fullyParallel: true,
@@ -33,6 +38,7 @@ export default defineConfig({
         DATABASE_URL: testDatabaseUrl,
         PORT: SERVER_PORT,
         CLIENT_URL,
+        INBOUND_EMAIL_WEBHOOK_SECRET: inboundEmailWebhookSecret,
       },
       reuseExistingServer: !process.env.CI,
       timeout: 60_000,

@@ -22,3 +22,37 @@ export async function deleteUserByEmail(email: string): Promise<void> {
     await client.end();
   }
 }
+
+/**
+ * Deletes a Ticket by id. There's no DELETE /api/tickets/:id route (no ticket UI/API exists
+ * yet), so tests that create tickets via POST /api/inbound-email must clean them up directly
+ * against the test DB, or repeated runs would accumulate rows. Ticket.id is a plain
+ * autoincrementing integer, not a generated-unique value like the emails used for users, so
+ * callers must track and pass back the id each created row was assigned.
+ */
+export async function deleteTicketById(id: number): Promise<void> {
+  const client = new Client({ connectionString: testDatabaseUrl });
+  await client.connect();
+  try {
+    await client.query('DELETE FROM "Ticket" WHERE id = $1', [id]);
+  } finally {
+    await client.end();
+  }
+}
+
+/**
+ * Reads a Ticket row directly from the test DB by id, bypassing the HTTP response entirely.
+ * Used to confirm POST /api/inbound-email actually persists a row (not just that the response
+ * body looks right) — a webhook could in principle return a well-shaped 201 without writing
+ * anything. Returns null if no such row exists.
+ */
+export async function getTicketById(id: number): Promise<Record<string, unknown> | null> {
+  const client = new Client({ connectionString: testDatabaseUrl });
+  await client.connect();
+  try {
+    const { rows } = await client.query('SELECT * FROM "Ticket" WHERE id = $1', [id]);
+    return rows[0] ?? null;
+  } finally {
+    await client.end();
+  }
+}

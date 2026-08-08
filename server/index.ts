@@ -6,6 +6,7 @@ import { CLIENT_URL } from "./env";
 import { requireAuth } from "./require-auth";
 import { db } from "./db";
 import { usersRouter } from "./routes/users";
+import { inboundEmailRouter } from "./routes/inbound-email";
 
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;
@@ -26,6 +27,7 @@ app.get("/api/me", requireAuth, (req, res) => {
 });
 
 app.use("/api/users", usersRouter);
+app.use("/api/inbound-email", inboundEmailRouter);
 
 app.get("/api/health", async (_req, res) => {
   try {

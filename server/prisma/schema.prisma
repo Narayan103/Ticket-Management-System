@@ -43,12 +43,18 @@ model Session {
 }
 
 model Ticket {
-  id        String         @id @default(uuid())
-  subject   String
-  status    TicketStatus   @default(OPEN)
-  category  TicketCategory
-  createdAt DateTime       @default(now())
-  updatedAt DateTime       @updatedAt
+  id           Int             @id @default(autoincrement())
+  subject      String
+  status       TicketStatus    @default(OPEN)
+  category     TicketCategory?
+  fromEmail    String
+  fromName     String
+  body         String
+  bodyHtml     String?
+  assignedToId String?
+  assignedTo   AuthUser?       @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  createdAt    DateTime        @default(now())
+  updatedAt    DateTime        @updatedAt
 }
 
 model AuthUser {
@@ -62,8 +68,9 @@ model AuthUser {
   updatedAt     DateTime  @updatedAt
   deletedAt     DateTime?
 
-  sessions AuthSession[]
-  accounts AuthAccount[]
+  sessions        AuthSession[]
+  accounts        AuthAccount[]
+  assignedTickets Ticket[]
 }
 
 model AuthSession {
