@@ -24,6 +24,7 @@ export const listTicketsQuerySchema = z.object({
   status: ticketStatusSchema.optional(),
   category: ticketCategoryFilterSchema.optional(),
   search: z.string().trim().min(1).optional(),
+  page: z.coerce.number().int().min(1).optional(),
 });
 
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;

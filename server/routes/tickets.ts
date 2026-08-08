@@ -5,6 +5,8 @@ import { db } from "../db";
 
 export const ticketsRouter = Router();
 
+const PAGE_SIZE = 10;
+
 function buildOrderBy(sortBy: "subject" | "fromName" | "category" | "status" | "createdAt", sortOrder: "asc" | "desc") {
   switch (sortBy) {
     case "subject":
@@ -26,32 +28,39 @@ ticketsRouter.get("/", requireAuth, async (req, res) => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { sortBy = "createdAt", sortOrder = "desc", status, category, search } = parsed.data;
+  const { sortBy = "createdAt", sortOrder = "desc", status, category, search, page = 1 } = parsed.data;
 
-  const tickets = await db.ticket.findMany({
-    where: {
-      ...(status ? { status } : {}),
-      ...(category === "UNCLASSIFIED" ? { category: null } : category ? { category } : {}),
-      ...(search
-        ? {
-            OR: [
-              { subject: { contains: search, mode: "insensitive" } },
-              { fromName: { contains: search, mode: "insensitive" } },
-              { fromEmail: { contains: search, mode: "insensitive" } },
-            ],
-          }
-        : {}),
-    },
-    orderBy: buildOrderBy(sortBy, sortOrder),
-    select: {
-      id: true,
-      subject: true,
-      status: true,
-      category: true,
-      fromEmail: true,
-      fromName: true,
-      createdAt: true,
-    },
-  });
-  res.json({ tickets });
+  const where = {
+    ...(status ? { status } : {}),
+    ...(category === "UNCLASSIFIED" ? { category: null } : category ? { category } : {}),
+    ...(search
+      ? {
+          OR: [
+            { subject: { contains: search, mode: "insensitive" as const } },
+            { fromName: { contains: search, mode: "insensitive" as const } },
+            { fromEmail: { contains: search, mode: "insensitive" as const } },
+          ],
+        }
+      : {}),
+  };
+
+  const [tickets, totalCount] = await Promise.all([
+    db.ticket.findMany({
+      where,
+      orderBy: buildOrderBy(sortBy, sortOrder),
+      select: {
+        id: true,
+        subject: true,
+        status: true,
+        category: true,
+        fromEmail: true,
+        fromName: true,
+        createdAt: true,
+      },
+      skip: (page - 1) * PAGE_SIZE,
+      take: PAGE_SIZE,
+    }),
+    db.ticket.count({ where }),
+  ]);
+  res.json({ tickets, totalCount, page, pageSize: PAGE_SIZE });
 });

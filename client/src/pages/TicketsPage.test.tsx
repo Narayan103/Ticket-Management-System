@@ -50,6 +50,9 @@ describe('TicketsPage', () => {
             createdAt: '2024-01-15T00:00:00.000Z',
           },
         ],
+        totalCount: 1,
+        page: 1,
+        pageSize: 10,
       },
     })
 
@@ -74,14 +77,21 @@ describe('TicketsPage', () => {
   })
 
   it('refetches with search/status/category params once filters change', async () => {
-    mockedGet.mockResolvedValue({ data: { tickets: [] } })
+    mockedGet.mockResolvedValue({ data: { tickets: [], totalCount: 0, page: 1, pageSize: 10 } })
     const user = userEvent.setup()
 
     renderTicketsPage()
 
     await waitFor(() => {
       expect(mockedGet).toHaveBeenCalledWith('/api/tickets', {
-        params: { sortBy: 'createdAt', sortOrder: 'desc', search: undefined, status: undefined, category: undefined },
+        params: {
+          sortBy: 'createdAt',
+          sortOrder: 'desc',
+          search: undefined,
+          status: undefined,
+          category: undefined,
+          page: 1,
+        },
       })
     })
 
@@ -90,10 +100,53 @@ describe('TicketsPage', () => {
     await waitFor(
       () => {
         expect(mockedGet).toHaveBeenCalledWith('/api/tickets', {
-          params: { sortBy: 'createdAt', sortOrder: 'desc', search: 'refund', status: undefined, category: undefined },
+          params: {
+            sortBy: 'createdAt',
+            sortOrder: 'desc',
+            search: 'refund',
+            status: undefined,
+            category: undefined,
+            page: 1,
+          },
         })
       },
       { timeout: 1000 },
     )
+  })
+
+  it('resets to page 1 and refetches when the page changes', async () => {
+    mockedGet.mockResolvedValue({
+      data: {
+        tickets: Array.from({ length: 10 }, (_, i) => ({
+          id: i + 1,
+          subject: `Ticket ${i + 1}`,
+          status: 'OPEN',
+          category: null,
+          fromEmail: 'a@example.com',
+          fromName: 'A',
+          createdAt: '2024-01-15T00:00:00.000Z',
+        })),
+        totalCount: 25,
+        page: 1,
+        pageSize: 10,
+      },
+    })
+    const user = userEvent.setup()
+
+    renderTicketsPage()
+
+    await waitFor(() => {
+      expect(mockedGet).toHaveBeenCalledWith('/api/tickets', {
+        params: expect.objectContaining({ page: 1 }),
+      })
+    })
+
+    await user.click(await screen.findByRole('button', { name: '2' }))
+
+    await waitFor(() => {
+      expect(mockedGet).toHaveBeenCalledWith('/api/tickets', {
+        params: expect.objectContaining({ page: 2 }),
+      })
+    })
   })
 })
