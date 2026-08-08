@@ -1,6 +1,7 @@
-import { Router } from "express";
-import { listTicketsQuerySchema, updateTicketSchema } from "core";
+import { Router, type Request, type Response } from "express";
+import { listTicketsQuerySchema, updateTicketSchema, createReplySchema } from "core";
 import { requireAuth } from "../require-auth";
+import { validateBody } from "../lib/validate";
 import { db } from "../db";
 import { Role } from "../types/role";
 
@@ -23,13 +24,28 @@ function buildOrderBy(sortBy: "subject" | "fromName" | "category" | "status" | "
   }
 }
 
-ticketsRouter.get("/", requireAuth, async (req, res) => {
-  const parsed = listTicketsQuerySchema.safeParse(req.query);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
-    return;
+function parseTicketId(req: Request, res: Response): number | undefined {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid ticket id" });
+    return undefined;
   }
-  const { sortBy = "createdAt", sortOrder = "desc", status, category, search, page = 1 } = parsed.data;
+  return id;
+}
+
+async function getTicketOrNotFound(id: number, res: Response): Promise<{ id: number } | undefined> {
+  const ticket = await db.ticket.findUnique({ where: { id }, select: { id: true } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return undefined;
+  }
+  return ticket;
+}
+
+ticketsRouter.get("/", requireAuth, async (req, res) => {
+  const parsed = validateBody(listTicketsQuerySchema, req.query, res);
+  if (!parsed) return;
+  const { sortBy = "createdAt", sortOrder = "desc", status, category, search, page = 1 } = parsed;
 
   const where = {
     ...(status ? { status } : {}),
@@ -67,11 +83,8 @@ ticketsRouter.get("/", requireAuth, async (req, res) => {
 });
 
 ticketsRouter.get("/:id", requireAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
-    res.status(400).json({ error: "Invalid ticket id" });
-    return;
-  }
+  const id = parseTicketId(req, res);
+  if (id === undefined) return;
 
   const ticket = await db.ticket.findUnique({
     where: { id },
@@ -86,6 +99,16 @@ ticketsRouter.get("/:id", requireAuth, async (req, res) => {
       createdAt: true,
       updatedAt: true,
       assignedTo: { select: { id: true, name: true } },
+      replies: {
+        orderBy: { createdAt: "asc" },
+        select: {
+          id: true,
+          body: true,
+          senderType: true,
+          createdAt: true,
+          author: { select: { id: true, name: true } },
+        },
+      },
     },
   });
 
@@ -98,18 +121,12 @@ ticketsRouter.get("/:id", requireAuth, async (req, res) => {
 });
 
 ticketsRouter.patch("/:id", requireAuth, async (req, res) => {
-  const id = Number(req.params.id);
-  if (!Number.isInteger(id)) {
-    res.status(400).json({ error: "Invalid ticket id" });
-    return;
-  }
+  const id = parseTicketId(req, res);
+  if (id === undefined) return;
 
-  const parsed = updateTicketSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
-    return;
-  }
-  const { status, category, assignedToId } = parsed.data;
+  const parsed = validateBody(updateTicketSchema, req.body, res);
+  if (!parsed) return;
+  const { status, category, assignedToId } = parsed;
 
   // Only admins may (re)assign a ticket — status/category can be changed by any
   // signed-in agent or admin, matching project-scope.md's "agents manage tickets".
@@ -118,11 +135,7 @@ ticketsRouter.patch("/:id", requireAuth, async (req, res) => {
     return;
   }
 
-  const existing = await db.ticket.findUnique({ where: { id }, select: { id: true } });
-  if (!existing) {
-    res.status(404).json({ error: "Ticket not found" });
-    return;
-  }
+  if (!(await getTicketOrNotFound(id, res))) return;
 
   if (assignedToId !== undefined && assignedToId !== null) {
     const agent = await db.authUser.findUnique({ where: { id: assignedToId }, select: { deletedAt: true, role: true } });
@@ -154,4 +167,32 @@ ticketsRouter.patch("/:id", requireAuth, async (req, res) => {
   });
 
   res.json({ ticket });
+});
+
+ticketsRouter.post("/:id/replies", requireAuth, async (req, res) => {
+  const id = parseTicketId(req, res);
+  if (id === undefined) return;
+
+  if (!(await getTicketOrNotFound(id, res))) return;
+
+  const parsed = validateBody(createReplySchema, req.body, res);
+  if (!parsed) return;
+
+  const reply = await db.reply.create({
+    data: {
+      ticketId: id,
+      authorId: req.user?.id,
+      senderType: "AGENT",
+      body: parsed.body,
+    },
+    select: {
+      id: true,
+      body: true,
+      senderType: true,
+      createdAt: true,
+      author: { select: { id: true, name: true } },
+    },
+  });
+
+  res.status(201).json({ reply });
 });

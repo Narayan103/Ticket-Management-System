@@ -2,6 +2,7 @@ import { Router } from "express";
 import { createUserSchema, updateUserSchema } from "core";
 import { auth } from "../auth";
 import { requireAuth, requireAdmin } from "../require-auth";
+import { validateBody } from "../lib/validate";
 import { db } from "../db";
 import { Role } from "../types/role";
 
@@ -26,12 +27,9 @@ usersRouter.get("/agents", requireAuth, requireAdmin, async (_req, res) => {
 });
 
 usersRouter.post("/", requireAuth, requireAdmin, async (req, res) => {
-  const parsed = createUserSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
-    return;
-  }
-  const { name, email, password } = parsed.data;
+  const parsed = validateBody(createUserSchema, req.body, res);
+  if (!parsed) return;
+  const { name, email, password } = parsed;
 
   const ctx = await auth.$context;
   const existing = await ctx.internalAdapter.findUserByEmail(email);
@@ -60,12 +58,9 @@ usersRouter.post("/", requireAuth, requireAdmin, async (req, res) => {
 });
 
 usersRouter.put("/:id", requireAuth, requireAdmin, async (req, res) => {
-  const parsed = updateUserSchema.safeParse(req.body);
-  if (!parsed.success) {
-    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
-    return;
-  }
-  const { name, email, password } = parsed.data;
+  const parsed = validateBody(updateUserSchema, req.body, res);
+  if (!parsed) return;
+  const { name, email, password } = parsed;
   const { id } = req.params;
   if (typeof id !== "string") {
     res.status(400).json({ error: "Invalid user id" });

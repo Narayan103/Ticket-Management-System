@@ -1,10 +1,4 @@
-import {
-  Dialog,
-  DialogContent,
-  DialogHeader,
-  DialogTitle,
-  DialogDescription,
-} from '@/components/ui/dialog'
+import FormModal from '@/components/FormModal'
 import EditUserForm from '@/components/EditUserForm'
 import type { User } from '@/components/UsersTable'
 
@@ -12,15 +6,9 @@ type EditUserModalProps = { user: User | null; onOpenChange: (open: boolean) => 
 
 function EditUserModal({ user, onOpenChange }: EditUserModalProps) {
   return (
-    <Dialog open={user !== null} onOpenChange={onOpenChange}>
-      <DialogContent>
-        <DialogHeader>
-          <DialogTitle>Edit User</DialogTitle>
-          <DialogDescription>Update this user's details.</DialogDescription>
-        </DialogHeader>
-        {user && <EditUserForm key={user.id} user={user} open={true} onOpenChange={onOpenChange} />}
-      </DialogContent>
-    </Dialog>
+    <FormModal open={user !== null} onOpenChange={onOpenChange} title="Edit User" description="Update this user's details.">
+      {user && <EditUserForm key={user.id} user={user} open={true} onOpenChange={onOpenChange} />}
+    </FormModal>
   )
 }
 

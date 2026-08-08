@@ -10,8 +10,10 @@ import { ArrowUpIcon, ArrowDownIcon, ArrowUpDownIcon } from 'lucide-react'
 import { Link } from '@/components/ui/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Card } from '@/components/ui/card'
-import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import TableSkeleton from '@/components/TableSkeleton'
+import EmptyState from '@/components/EmptyState'
+import { formatDateTime } from '@/lib/format-date'
 import { TICKET_STATUS_LABELS, type TicketStatus } from '@/types/ticket-status'
 import { TICKET_CATEGORY_LABELS, type TicketCategory } from '@/types/ticket-category'
 
@@ -83,8 +85,7 @@ const columns: ColumnDef<Ticket>[] = [
     id: 'createdAt',
     header: 'Created',
     accessorKey: 'createdAt',
-    cell: ({ row }) =>
-      new Date(row.original.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+    cell: ({ row }) => formatDateTime(row.original.createdAt, 'medium'),
   },
 ]
 
@@ -106,8 +107,8 @@ function TicketsTable({ tickets, isPending, sorting, onSortingChange }: TicketsT
 
   if (isPending) {
     return (
-      <Card className="mt-6 gap-0 p-0">
-        <Table>
+      <TableSkeleton
+        header={
           <TableHeader>
             <TableRow>
               {headerGroup?.headers.map((header) => (
@@ -115,24 +116,14 @@ function TicketsTable({ tickets, isPending, sorting, onSortingChange }: TicketsT
               ))}
             </TableRow>
           </TableHeader>
-          <TableBody>
-            {Array.from({ length: 5 }).map((_, i) => (
-              <TableRow key={i}>
-                {Array.from({ length: COLUMN_COUNT }).map((_, j) => (
-                  <TableCell key={j}>
-                    <Skeleton className="h-4 w-32" />
-                  </TableCell>
-                ))}
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      </Card>
+        }
+        columnWidths={Array.from({ length: COLUMN_COUNT }, () => 'w-32')}
+      />
     )
   }
 
   if (tickets.length === 0) {
-    return <p className="mt-4 text-sm text-neutral-600 dark:text-neutral-400">No tickets found.</p>
+    return <EmptyState message="No tickets found." />
   }
 
   return (

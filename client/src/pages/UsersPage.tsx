@@ -1,12 +1,13 @@
 import { useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
-import axios from 'axios'
 import { apiClient } from '@/lib/api-client'
+import { getErrorMessage } from '@/lib/get-error-message'
 import { Button } from '@/components/ui/button'
 import CreateUserModal from '@/components/CreateUserModal'
 import EditUserModal from '@/components/EditUserModal'
 import DeleteUserModal from '@/components/DeleteUserModal'
 import UsersTable, { type User } from '@/components/UsersTable'
+import ErrorMessage from '@/components/ErrorMessage'
 
 function UsersPage() {
   const [createUserOpen, setCreateUserOpen] = useState(false)
@@ -17,11 +18,7 @@ function UsersPage() {
     queryFn: () => apiClient.get<{ users: User[] }>('/api/users').then((res) => res.data.users),
   })
 
-  const errorMessage = error
-    ? axios.isAxiosError(error)
-      ? (error.response?.data?.error ?? error.message)
-      : 'Failed to load users'
-    : null
+  const errorMessage = getErrorMessage(error, 'Failed to load users')
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-12">
@@ -30,7 +27,7 @@ function UsersPage() {
         <Button onClick={() => setCreateUserOpen(true)}>Create User</Button>
       </div>
 
-      {errorMessage && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>}
+      <ErrorMessage message={errorMessage} />
       {!errorMessage && (
         <UsersTable users={users} isPending={isPending} onEditUser={setEditingUser} onDeleteUser={setDeletingUser} />
       )}

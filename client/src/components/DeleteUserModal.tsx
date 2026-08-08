@@ -1,7 +1,7 @@
 import { useEffect } from 'react'
-import axios from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
+import { getErrorMessage } from '@/lib/get-error-message'
 import {
   AlertDialog,
   AlertDialogContent,
@@ -33,11 +33,7 @@ function DeleteUserModal({ user, onOpenChange }: DeleteUserModalProps) {
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [user])
 
-  const serverError = mutation.error
-    ? axios.isAxiosError(mutation.error)
-      ? (mutation.error.response?.data?.error ?? mutation.error.message)
-      : 'Failed to delete user'
-    : null
+  const serverError = getErrorMessage(mutation.error, 'Failed to delete user')
 
   return (
     <AlertDialog open={user !== null} onOpenChange={onOpenChange}>

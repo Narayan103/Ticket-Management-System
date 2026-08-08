@@ -24,6 +24,11 @@ enum TicketCategory {
   REFUND_REQUEST
 }
 
+enum ReplySenderType {
+  AGENT
+  CUSTOMER
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -53,8 +58,20 @@ model Ticket {
   bodyHtml     String?
   assignedToId String?
   assignedTo   AuthUser?       @relation(fields: [assignedToId], references: [id], onDelete: SetNull)
+  replies      Reply[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+}
+
+model Reply {
+  id         Int             @id @default(autoincrement())
+  ticketId   Int
+  ticket     Ticket          @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+  authorId   String?
+  author     AuthUser?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
+  senderType ReplySenderType
+  body       String
+  createdAt  DateTime        @default(now())
 }
 
 model AuthUser {
@@ -71,6 +88,7 @@ model AuthUser {
   sessions        AuthSession[]
   accounts        AuthAccount[]
   assignedTickets Ticket[]
+  replies         Reply[]
 }
 
 model AuthSession {

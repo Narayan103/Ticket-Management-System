@@ -1,20 +1,13 @@
 import { useEffect, useState } from 'react'
 import { useQuery } from '@tanstack/react-query'
 import type { SortingState } from '@tanstack/react-table'
-import axios from 'axios'
 import { apiClient } from '@/lib/api-client'
+import { getErrorMessage } from '@/lib/get-error-message'
+import { useDebouncedValue } from '@/lib/use-debounced-value'
 import TicketsTable, { type Ticket } from '@/components/TicketsTable'
 import TicketsFilters, { type StatusFilter, type CategoryFilter } from '@/components/TicketsFilters'
 import TicketsPagination from '@/components/TicketsPagination'
-
-function useDebouncedValue<T>(value: T, delayMs: number): T {
-  const [debounced, setDebounced] = useState(value)
-  useEffect(() => {
-    const timeout = setTimeout(() => setDebounced(value), delayMs)
-    return () => clearTimeout(timeout)
-  }, [value, delayMs])
-  return debounced
-}
+import ErrorMessage from '@/components/ErrorMessage'
 
 function TicketsPage() {
   const [sorting, setSorting] = useState<SortingState>([{ id: 'createdAt', desc: true }])
@@ -52,11 +45,7 @@ function TicketsPage() {
   const { tickets, totalCount, pageSize } = data
   const totalPages = Math.max(1, Math.ceil(totalCount / pageSize))
 
-  const errorMessage = error
-    ? axios.isAxiosError(error)
-      ? (error.response?.data?.error ?? error.message)
-      : 'Failed to load tickets'
-    : null
+  const errorMessage = getErrorMessage(error, 'Failed to load tickets')
 
   return (
     <main className="mx-auto max-w-6xl px-6 py-12">
@@ -71,7 +60,7 @@ function TicketsPage() {
         onCategoryChange={setCategory}
       />
 
-      {errorMessage && <p className="mt-4 text-sm text-red-600 dark:text-red-400">{errorMessage}</p>}
+      <ErrorMessage message={errorMessage} />
       {!errorMessage && (
         <>
           <TicketsTable tickets={tickets} isPending={isPending} sorting={sorting} onSortingChange={setSorting} />

@@ -7,7 +7,7 @@ import { useSession } from '@/lib/auth-client'
 import TicketDetailPage from './TicketDetailPage'
 
 vi.mock('@/lib/api-client', () => ({
-  apiClient: { get: vi.fn(), patch: vi.fn() },
+  apiClient: { get: vi.fn(), patch: vi.fn(), post: vi.fn() },
 }))
 
 vi.mock('@/lib/auth-client', () => ({
@@ -63,6 +63,15 @@ describe('TicketDetailPage', () => {
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-16T00:00:00.000Z',
           assignedTo: { id: 'agent-1', name: 'Agent Smith' },
+          replies: [
+            {
+              id: 1,
+              body: 'Thanks for reaching out, looking into this now.',
+              senderType: 'AGENT',
+              createdAt: '2024-01-15T12:00:00.000Z',
+              author: { id: 'agent-2', name: 'Another Agent' },
+            },
+          ],
         },
       },
     })
@@ -93,6 +102,7 @@ describe('TicketDetailPage', () => {
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-16T00:00:00.000Z',
           assignedTo: null,
+          replies: [],
         },
       },
     })
@@ -118,6 +128,7 @@ describe('TicketDetailPage', () => {
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-16T00:00:00.000Z',
           assignedTo: { id: 'agent-1', name: 'Agent Smith' },
+          replies: [],
         },
       },
     })
@@ -148,6 +159,7 @@ describe('TicketDetailPage', () => {
             createdAt: '2024-01-15T00:00:00.000Z',
             updatedAt: '2024-01-16T00:00:00.000Z',
             assignedTo: null,
+            replies: [],
           },
         },
       })
@@ -173,6 +185,7 @@ describe('TicketDetailPage', () => {
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-15T00:00:00.000Z',
           assignedTo: null,
+          replies: [],
         },
       },
     })
@@ -181,6 +194,38 @@ describe('TicketDetailPage', () => {
 
     expect(await screen.findByText('Unclassified')).toBeInTheDocument()
     expect(screen.getByText('Unassigned')).toBeInTheDocument()
+  })
+
+  it('passes the fetched replies through to the reply thread', async () => {
+    mockedGet.mockResolvedValue({
+      data: {
+        ticket: {
+          id: 1,
+          subject: 'Cannot log in',
+          status: 'OPEN',
+          category: null,
+          fromEmail: 'a@example.com',
+          fromName: 'A Customer',
+          body: 'I cannot log in to my account.',
+          createdAt: '2024-01-15T00:00:00.000Z',
+          updatedAt: '2024-01-15T00:00:00.000Z',
+          assignedTo: null,
+          replies: [
+            {
+              id: 1,
+              body: 'First reply',
+              senderType: 'CUSTOMER',
+              createdAt: '2024-01-15T10:00:00.000Z',
+              author: null,
+            },
+          ],
+        },
+      },
+    })
+
+    renderTicketDetailPage('1')
+
+    expect(await screen.findByText('First reply')).toBeInTheDocument()
   })
 
   it('shows the server error message when the ticket is not found', async () => {

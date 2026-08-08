@@ -11,8 +11,6 @@ function uniqueEmail(workerIndex: number) {
   return `e2e-create-user-${workerIndex}-${Date.now()}@example.com`;
 }
 
-const CREATE_USERS_API_PATH = "/api/users";
-
 test.describe("Create User modal", () => {
   const createdEmails: string[] = [];
 
@@ -23,84 +21,12 @@ test.describe("Create User modal", () => {
     }
   });
 
-  test("Create User button opens the modal with all three fields", async ({ page }) => {
-    await loginViaUi(page, ADMIN_USER);
-    await page.goto("/users");
-
-    await expect(page.getByRole("dialog")).not.toBeVisible();
-    await page.getByRole("button", { name: "Create User" }).click();
-
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("heading", { name: "Create User" })).toBeVisible();
-    await expect(page.getByLabel("Name")).toBeVisible();
-    await expect(page.getByLabel("Email")).toBeVisible();
-    await expect(page.getByLabel("Password")).toBeVisible();
-  });
-
-  test("name under 3 characters shows a validation error and sends no request", async ({
-    page,
-  }) => {
-    let requested = false;
-    page.on("request", (req) => {
-      if (req.method() === "POST" && req.url().includes(CREATE_USERS_API_PATH)) requested = true;
-    });
-
-    await loginViaUi(page, ADMIN_USER);
-    await page.goto("/users");
-    await page.getByRole("button", { name: "Create User" }).click();
-
-    await page.getByLabel("Name").fill("Al");
-    await page.getByLabel("Email").fill(uniqueEmail(test.info().workerIndex));
-    await page.getByLabel("Password").fill("validpassword123");
-    await page.getByRole("dialog").getByRole("button", { name: "Create User" }).click();
-
-    await expect(page.getByText("Name must be at least 3 characters")).toBeVisible();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    expect(requested).toBe(false);
-  });
-
-  test("invalid email format shows a validation error and sends no request", async ({ page }) => {
-    let requested = false;
-    page.on("request", (req) => {
-      if (req.method() === "POST" && req.url().includes(CREATE_USERS_API_PATH)) requested = true;
-    });
-
-    await loginViaUi(page, ADMIN_USER);
-    await page.goto("/users");
-    await page.getByRole("button", { name: "Create User" }).click();
-
-    await page.getByLabel("Name").fill("Alice Example");
-    await page.getByLabel("Email").fill("not-an-email");
-    await page.getByLabel("Password").fill("validpassword123");
-    await page.getByRole("dialog").getByRole("button", { name: "Create User" }).click();
-
-    await expect(page.getByText("Enter a valid email address")).toBeVisible();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    expect(requested).toBe(false);
-  });
-
-  test("password under 8 characters shows a validation error and sends no request", async ({
-    page,
-  }) => {
-    let requested = false;
-    page.on("request", (req) => {
-      if (req.method() === "POST" && req.url().includes(CREATE_USERS_API_PATH)) requested = true;
-    });
-
-    await loginViaUi(page, ADMIN_USER);
-    await page.goto("/users");
-    await page.getByRole("button", { name: "Create User" }).click();
-
-    await page.getByLabel("Name").fill("Alice Example");
-    await page.getByLabel("Email").fill(uniqueEmail(test.info().workerIndex));
-    await page.getByLabel("Password").fill("short1");
-    await page.getByRole("dialog").getByRole("button", { name: "Create User" }).click();
-
-    await expect(page.getByText("Password must be at least 8 characters")).toBeVisible();
-    await expect(page.getByRole("dialog")).toBeVisible();
-    expect(requested).toBe(false);
-  });
+  // Modal-opens-with-fields, and all client-side validation (name/email/password), are already
+  // proven by unit tests: CreateUserForm.test.tsx implicitly renders and exercises all three
+  // labeled fields in every test, and covers each validation message + "blocks submission"
+  // behavior directly; UsersPage.test.tsx separately proves clicking "Create User" opens a
+  // dialog containing the real (unmocked) CreateUserForm. No need to re-drive those same
+  // interactions through a real browser here.
 
   test("valid submission creates the user, closes the modal, and the user appears in the list without a reload", async ({
     page,

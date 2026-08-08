@@ -75,11 +75,12 @@ test.describe("GET /api/tickets/:id authorization", () => {
     expect(typeof body.ticket.createdAt).toBe("string");
     expect(typeof body.ticket.updatedAt).toBe("string");
     expect(body.ticket.assignedTo).toBeNull(); // never assigned by any current flow
+    expect(body.ticket.replies).toEqual([]); // no replies posted in this test
 
     // No unexpected extra/missing fields in the response shape (e.g. bodyHtml/assignedToId
     // from the list/webhook response aren't part of this endpoint's documented shape).
     expect(Object.keys(body.ticket).sort()).toEqual(
-      ["id", "subject", "status", "category", "fromEmail", "fromName", "body", "createdAt", "updatedAt", "assignedTo"].sort(),
+      ["id", "subject", "status", "category", "fromEmail", "fromName", "body", "createdAt", "updatedAt", "assignedTo", "replies"].sort(),
     );
   });
 

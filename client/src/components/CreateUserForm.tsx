@@ -2,9 +2,9 @@ import { useEffect } from 'react'
 import { useForm } from 'react-hook-form'
 import { zodResolver } from '@hookform/resolvers/zod'
 import { createUserSchema, type CreateUserInput } from 'core'
-import axios from 'axios'
 import { useMutation, useQueryClient } from '@tanstack/react-query'
 import { apiClient } from '@/lib/api-client'
+import { getErrorMessage } from '@/lib/get-error-message'
 import { DialogFooter } from '@/components/ui/dialog'
 import { Field, FieldLabel, FieldError, FieldGroup } from '@/components/ui/field'
 import { Input } from '@/components/ui/input'
@@ -33,11 +33,7 @@ function CreateUserForm({ open, onOpenChange }: CreateUserFormProps) {
     },
   })
 
-  const serverError = mutation.error
-    ? axios.isAxiosError(mutation.error)
-      ? (mutation.error.response?.data?.error ?? mutation.error.message)
-      : 'Failed to create user'
-    : null
+  const serverError = getErrorMessage(mutation.error, 'Failed to create user')
 
   const onSubmit = handleSubmit((data) => mutation.mutate(data))
 

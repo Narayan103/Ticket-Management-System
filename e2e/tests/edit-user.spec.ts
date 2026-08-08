@@ -9,7 +9,6 @@ import { deleteUserByEmail } from "./support/db";
 // creation, and page.request shares the admin session cookie set by loginViaUi.
 const SERVER_URL = `http://localhost:${process.env.SERVER_PORT ?? "3002"}`;
 const USERS_API = `${SERVER_URL}/api/users`;
-const EDIT_USER_API_PATH = "/api/users/";
 
 const DEFAULT_PASSWORD = "originalpassword123";
 
@@ -71,84 +70,9 @@ test.describe("Edit User modal", () => {
     await page.getByRole("button", { name: `Edit ${user.name}` }).click();
   }
 
-  // The prefill check and the three validation tests below never cause a PUT request to reach
-  // the server (validation blocks submission client-side, and the prefill test doesn't submit
-  // at all), so they can't mutate anything — there's no need to spin up a disposable user via
-  // createTestUser for them. They target the already-logged-in ADMIN_USER's own row instead,
-  // which both avoids unnecessary cleanup and reduces how many extra rows this file creates
-  // concurrently (fullyParallel + multiple spec files hitting the same test DB means every
-  // extra created-then-deleted row is a small chance of transiently tripping
-  // users-list.spec.ts's exact-row-count assertion elsewhere in the suite).
-
-  test("edit button opens the dialog pre-filled with the user's current name/email and an empty password", async ({
-    page,
-  }) => {
-    await loginViaUi(page, ADMIN_USER);
-    await openEditDialog(page, ADMIN_USER);
-
-    const dialog = page.getByRole("dialog");
-    await expect(dialog).toBeVisible();
-    await expect(dialog.getByRole("heading", { name: "Edit User" })).toBeVisible();
-    await expect(dialog.getByLabel("Name")).toHaveValue(ADMIN_USER.name);
-    await expect(dialog.getByLabel("Email")).toHaveValue(ADMIN_USER.email);
-    await expect(dialog.getByLabel("New Password")).toHaveValue("");
-  });
-
-  test("name under 3 characters shows a validation error and sends no request", async ({ page }) => {
-    let requested = false;
-    page.on("request", (req) => {
-      if (req.method() === "PUT" && req.url().includes(EDIT_USER_API_PATH)) requested = true;
-    });
-
-    await loginViaUi(page, ADMIN_USER);
-    await openEditDialog(page, ADMIN_USER);
-
-    const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Name").fill("Al");
-    await dialog.getByRole("button", { name: "Save Changes" }).click();
-
-    await expect(page.getByText("Name must be at least 3 characters")).toBeVisible();
-    await expect(dialog).toBeVisible();
-    expect(requested).toBe(false);
-  });
-
-  test("invalid email format shows a validation error and sends no request", async ({ page }) => {
-    let requested = false;
-    page.on("request", (req) => {
-      if (req.method() === "PUT" && req.url().includes(EDIT_USER_API_PATH)) requested = true;
-    });
-
-    await loginViaUi(page, ADMIN_USER);
-    await openEditDialog(page, ADMIN_USER);
-
-    const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("Email").fill("not-an-email");
-    await dialog.getByRole("button", { name: "Save Changes" }).click();
-
-    await expect(page.getByText("Enter a valid email address")).toBeVisible();
-    await expect(dialog).toBeVisible();
-    expect(requested).toBe(false);
-  });
-
-  test("a non-empty password under 8 characters shows a validation error and sends no request", async ({
-    page,
-  }) => {
-    let requested = false;
-    page.on("request", (req) => {
-      if (req.method() === "PUT" && req.url().includes(EDIT_USER_API_PATH)) requested = true;
-    });
-
-    await loginViaUi(page, ADMIN_USER);
-    await openEditDialog(page, ADMIN_USER);
-
-    const dialog = page.getByRole("dialog");
-    await dialog.getByLabel("New Password").fill("short1");
-    await dialog.getByRole("button", { name: "Save Changes" }).click();
-
-    await expect(page.getByText("Password must be at least 8 characters")).toBeVisible();
-    await expect(dialog).toBeVisible();
-    expect(requested).toBe(false);
-  });
+  // The prefill behavior and all client-side validation (name/email/password) are already
+  // proven by EditUserForm.test.tsx's unit tests — no need to re-drive those same interactions
+  // through a real browser here.
 
   test("valid name/email edit with an empty password updates the row without a reload, and the original password still works", async ({
     page,
