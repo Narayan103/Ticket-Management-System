@@ -64,3 +64,34 @@ ticketsRouter.get("/", requireAuth, async (req, res) => {
   ]);
   res.json({ tickets, totalCount, page, pageSize: PAGE_SIZE });
 });
+
+ticketsRouter.get("/:id", requireAuth, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid ticket id" });
+    return;
+  }
+
+  const ticket = await db.ticket.findUnique({
+    where: { id },
+    select: {
+      id: true,
+      subject: true,
+      status: true,
+      category: true,
+      fromEmail: true,
+      fromName: true,
+      body: true,
+      createdAt: true,
+      updatedAt: true,
+      assignedTo: { select: { name: true } },
+    },
+  });
+
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  res.json({ ticket });
+});

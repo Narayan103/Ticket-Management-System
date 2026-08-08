@@ -1,14 +1,20 @@
 import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import { MemoryRouter } from 'react-router-dom'
 import userEvent from '@testing-library/user-event'
 import type { SortingState } from '@tanstack/react-table'
+import type { ReactElement } from 'react'
 import TicketsTable from './TicketsTable'
 
 const DEFAULT_SORTING: SortingState = [{ id: 'createdAt', desc: true }]
 
+function renderTable(element: ReactElement) {
+  return render(<MemoryRouter>{element}</MemoryRouter>)
+}
+
 describe('TicketsTable', () => {
   it('shows a loading skeleton when pending', () => {
-    const { container } = render(
+    const { container } = renderTable(
       <TicketsTable tickets={[]} isPending={true} sorting={DEFAULT_SORTING} onSortingChange={vi.fn()} />,
     )
 
@@ -17,14 +23,14 @@ describe('TicketsTable', () => {
   })
 
   it('shows an empty state when there are no tickets', () => {
-    render(<TicketsTable tickets={[]} isPending={false} sorting={DEFAULT_SORTING} onSortingChange={vi.fn()} />)
+    renderTable(<TicketsTable tickets={[]} isPending={false} sorting={DEFAULT_SORTING} onSortingChange={vi.fn()} />)
 
     expect(screen.getByText('No tickets found.')).toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
   })
 
   it('renders each ticket row with its sender name/email and status styling', () => {
-    render(
+    renderTable(
       <TicketsTable
         isPending={false}
         sorting={DEFAULT_SORTING}
@@ -61,7 +67,7 @@ describe('TicketsTable', () => {
   })
 
   it('renders tickets in the order given (sorting is the server\'s responsibility, not the table\'s)', () => {
-    render(
+    renderTable(
       <TicketsTable
         isPending={false}
         sorting={DEFAULT_SORTING}
@@ -79,7 +85,7 @@ describe('TicketsTable', () => {
   })
 
   it('renders category as its human label, and "Unclassified" when category is null', () => {
-    render(
+    renderTable(
       <TicketsTable
         isPending={false}
         sorting={DEFAULT_SORTING}
@@ -98,7 +104,7 @@ describe('TicketsTable', () => {
   it('clicking a different column header calls onSortingChange with that column, ascending', async () => {
     const user = userEvent.setup()
     const onSortingChange = vi.fn()
-    render(
+    renderTable(
       <TicketsTable
         isPending={false}
         sorting={DEFAULT_SORTING}
@@ -120,7 +126,7 @@ describe('TicketsTable', () => {
   it('clicking the currently-sorted column toggles its direction instead of clearing it', async () => {
     const user = userEvent.setup()
     const onSortingChange = vi.fn()
-    render(
+    renderTable(
       <TicketsTable
         isPending={false}
         sorting={[{ id: 'createdAt', desc: true }]}
@@ -138,8 +144,23 @@ describe('TicketsTable', () => {
     expect(result).toEqual([{ id: 'createdAt', desc: false }])
   })
 
+  it('renders the subject as a link to the ticket detail page', () => {
+    renderTable(
+      <TicketsTable
+        isPending={false}
+        sorting={DEFAULT_SORTING}
+        onSortingChange={vi.fn()}
+        tickets={[
+          { id: 42, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
+        ]}
+      />,
+    )
+
+    expect(screen.getByRole('link', { name: 'A ticket' })).toHaveAttribute('href', '/tickets/42')
+  })
+
   it('shows a direction icon only on the active column, and a neutral hint icon on the rest', () => {
-    render(
+    renderTable(
       <TicketsTable
         isPending={false}
         sorting={[{ id: 'createdAt', desc: true }]}

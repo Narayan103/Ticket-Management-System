@@ -7,6 +7,7 @@ import {
   type OnChangeFn,
 } from '@tanstack/react-table'
 import { ArrowUpIcon, ArrowDownIcon, ArrowUpDownIcon } from 'lucide-react'
+import { Link } from '@/components/ui/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
@@ -43,9 +44,9 @@ const columns: ColumnDef<Ticket>[] = [
     header: 'Subject',
     accessorKey: 'subject',
     cell: ({ row }) => (
-      <span className="block max-w-70 truncate" title={row.original.subject}>
+      <Link to={`/tickets/${row.original.id}`} className="block max-w-70 truncate" title={row.original.subject}>
         {row.original.subject}
-      </span>
+      </Link>
     ),
   },
   {
