@@ -1,14 +1,19 @@
 import { useParams, Link } from 'react-router-dom'
-import { useQuery } from '@tanstack/react-query'
+import { useQuery, useMutation, useQueryClient } from '@tanstack/react-query'
 import axios from 'axios'
 import { apiClient } from '@/lib/api-client'
+import { useSession } from '@/lib/auth-client'
 import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
+import { Role } from '@/types/role'
 import { TICKET_STATUS_LABELS, type TicketStatus } from '@/types/ticket-status'
 import { TICKET_CATEGORY_LABELS, type TicketCategory } from '@/types/ticket-category'
+
+type Agent = { id: string; name: string }
 
 type TicketDetail = {
   id: number
@@ -20,8 +25,10 @@ type TicketDetail = {
   body: string
   createdAt: string
   updatedAt: string
-  assignedTo: { name: string } | null
+  assignedTo: Agent | null
 }
+
+const UNASSIGNED = 'UNASSIGNED'
 
 const STATUS_BADGE_STYLES: Record<TicketStatus, string> = {
   OPEN: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
@@ -35,16 +42,36 @@ function formatDateTime(value: string) {
 
 function TicketDetailPage() {
   const { id } = useParams<{ id: string }>()
+  const queryClient = useQueryClient()
+  const { data: session } = useSession()
+  const isAdmin = session?.user.role === Role.ADMIN
 
   const { data: ticket, isPending, error } = useQuery({
     queryKey: ['ticket', id],
     queryFn: () => apiClient.get<{ ticket: TicketDetail }>(`/api/tickets/${id}`).then((res) => res.data.ticket),
   })
 
+  const { data: agents = [] } = useQuery({
+    queryKey: ['agents'],
+    queryFn: () => apiClient.get<{ agents: Agent[] }>('/api/users/agents').then((res) => res.data.agents),
+    enabled: isAdmin,
+  })
+
+  const assignMutation = useMutation({
+    mutationFn: (assignedToId: string | null) => apiClient.patch(`/api/tickets/${id}`, { assignedToId }),
+    onSuccess: () => queryClient.invalidateQueries({ queryKey: ['ticket', id] }),
+  })
+
   const errorMessage = error
     ? axios.isAxiosError(error)
       ? (error.response?.data?.error ?? error.message)
       : 'Failed to load ticket'
+    : null
+
+  const assignErrorMessage = assignMutation.error
+    ? axios.isAxiosError(assignMutation.error)
+      ? (assignMutation.error.response?.data?.error ?? assignMutation.error.message)
+      : 'Failed to update assignee'
     : null
 
   return (
@@ -93,7 +120,27 @@ function TicketDetailPage() {
             </div>
             <div>
               <span className="text-neutral-500 dark:text-neutral-500">Assigned to: </span>
-              {ticket.assignedTo?.name ?? 'Unassigned'}
+              {isAdmin ? (
+                <Select
+                  value={ticket.assignedTo?.id ?? UNASSIGNED}
+                  onValueChange={(value) => assignMutation.mutate(value === UNASSIGNED ? null : value)}
+                >
+                  <SelectTrigger size="sm" aria-label="Assign to agent" disabled={assignMutation.isPending}>
+                    <SelectValue>{() => ticket.assignedTo?.name ?? 'Unassigned'}</SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={UNASSIGNED}>Unassigned</SelectItem>
+                    {agents.map((agent) => (
+                      <SelectItem key={agent.id} value={agent.id}>
+                        {agent.name}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              ) : (
+                ticket.assignedTo?.name ?? 'Unassigned'
+              )}
+              {assignErrorMessage && <p className="mt-1 text-xs text-red-600 dark:text-red-400">{assignErrorMessage}</p>}
             </div>
             <div>
               <span className="text-neutral-500 dark:text-neutral-500">Created: </span>

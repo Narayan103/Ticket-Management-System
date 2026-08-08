@@ -16,6 +16,15 @@ usersRouter.get("/", requireAuth, requireAdmin, async (_req, res) => {
   res.json({ users });
 });
 
+usersRouter.get("/agents", requireAuth, requireAdmin, async (_req, res) => {
+  const agents = await db.authUser.findMany({
+    where: { deletedAt: null, role: Role.AGENT },
+    select: { id: true, name: true },
+    orderBy: { name: "asc" },
+  });
+  res.json({ agents });
+});
+
 usersRouter.post("/", requireAuth, requireAdmin, async (req, res) => {
   const parsed = createUserSchema.safeParse(req.body);
   if (!parsed.success) {

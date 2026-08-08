@@ -1,7 +1,8 @@
 import { Router } from "express";
-import { listTicketsQuerySchema } from "core";
-import { requireAuth } from "../require-auth";
+import { listTicketsQuerySchema, assignTicketSchema } from "core";
+import { requireAuth, requireAdmin } from "../require-auth";
 import { db } from "../db";
+import { Role } from "../types/role";
 
 export const ticketsRouter = Router();
 
@@ -84,7 +85,7 @@ ticketsRouter.get("/:id", requireAuth, async (req, res) => {
       body: true,
       createdAt: true,
       updatedAt: true,
-      assignedTo: { select: { name: true } },
+      assignedTo: { select: { id: true, name: true } },
     },
   });
 
@@ -92,6 +93,54 @@ ticketsRouter.get("/:id", requireAuth, async (req, res) => {
     res.status(404).json({ error: "Ticket not found" });
     return;
   }
+
+  res.json({ ticket });
+});
+
+ticketsRouter.patch("/:id", requireAuth, requireAdmin, async (req, res) => {
+  const id = Number(req.params.id);
+  if (!Number.isInteger(id)) {
+    res.status(400).json({ error: "Invalid ticket id" });
+    return;
+  }
+
+  const parsed = assignTicketSchema.safeParse(req.body);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const { assignedToId } = parsed.data;
+
+  const existing = await db.ticket.findUnique({ where: { id }, select: { id: true } });
+  if (!existing) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  if (assignedToId !== null) {
+    const agent = await db.authUser.findUnique({ where: { id: assignedToId }, select: { deletedAt: true, role: true } });
+    if (!agent || agent.deletedAt || agent.role !== Role.AGENT) {
+      res.status(400).json({ error: "Assignee must be an active agent" });
+      return;
+    }
+  }
+
+  const ticket = await db.ticket.update({
+    where: { id },
+    data: { assignedToId },
+    select: {
+      id: true,
+      subject: true,
+      status: true,
+      category: true,
+      fromEmail: true,
+      fromName: true,
+      body: true,
+      createdAt: true,
+      updatedAt: true,
+      assignedTo: { select: { id: true, name: true } },
+    },
+  });
 
   res.json({ ticket });
 });

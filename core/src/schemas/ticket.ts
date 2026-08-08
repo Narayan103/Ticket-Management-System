@@ -28,3 +28,9 @@ export const listTicketsQuerySchema = z.object({
 });
 
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;
+
+export const assignTicketSchema = z.object({
+  assignedToId: z.string().nullable(),
+});
+
+export type AssignTicketInput = z.infer<typeof assignTicketSchema>;
