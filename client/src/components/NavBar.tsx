@@ -16,6 +16,12 @@ function NavBar() {
         <Link to="/" className="font-semibold text-purple-600 dark:text-purple-400">
           Ticket Management
         </Link>
+        <Link
+          to="/tickets"
+          className="text-sm font-medium text-neutral-600 hover:text-neutral-900 dark:text-neutral-400 dark:hover:text-neutral-100"
+        >
+          Tickets
+        </Link>
         {session?.user.role === Role.ADMIN && (
           <Link
             to="/users"

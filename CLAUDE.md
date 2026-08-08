@@ -12,10 +12,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Before writing or changing code that touches Bun, Express, React, or Vite APIs, use the `context7` MCP server (`resolve-library-id` then `query-docs`) to pull current documentation rather than relying on training data — this stack (especially Bun) moves fast enough that remembered APIs/flags can be stale or wrong.
 
+## Test strategy: component tests first, E2E only when necessary
+
+Default to component tests (Vitest + RTL, see "Writing component tests" below) for anything that's really about a component's own behavior — given some props or mocked data, does it render the right thing, call the right callback, show the right error. Reach for an E2E test only when the behavior genuinely can't be verified without a real server/browser: auth middleware and session handling (`requireAuth`/`requireAdmin`, login/logout, session-cookie behavior), real routing/redirect behavior (`ProtectedLayout`/`AdminLayout`), and flows that span multiple real requests (e.g. create something → it shows up elsewhere without a reload).
+
+Concrete precedent: `TicketsTable`'s sort-order and category-label rendering were originally covered by *both* an E2E test (create real tickets via the inbound-email webhook, navigate to `/tickets`, check DOM order/text) and a component test. The E2E version added nothing — `TicketsTable` doesn't sort anything itself, it just renders whatever it's given — so it was removed in favor of `TicketsTable.test.tsx`'s dedicated tests ("renders tickets in the order given", "renders category as its human label..."). `e2e/tests/tickets-list.spec.ts` kept only its authorization tests (`GET /api/tickets` 401/200 checks), since those verify real server middleware with no component-test equivalent.
+
+When a new feature needs tests, default to component tests for the UI piece, and only add E2E coverage for the piece that's actually server/routing/session-shaped — not as a blanket "also write E2E for this" reflex.
+
 ## Writing E2E tests
 
-Use the `e2e-test-writer` agent (`.claude/agents/e2e-test-writer.md`) to write or update Playwright end-to-end tests, rather than writing them directly — it has this project's testing setup and conventions (test database, `webServer` config, auth flow, role-gating patterns) built in. Delegate to it proactively whenever a user-facing feature (a new page, route, form, or auth/role-gated flow) is added or changed, not just when explicitly asked for tests.
-****
+Use the `e2e-test-writer` agent (`.claude/agents/e2e-test-writer.md`) to write or update Playwright end-to-end tests, rather than writing them directly — it has this project's testing setup and conventions (test database, `webServer` config, auth flow, role-gating patterns) built in. Delegate to it proactively whenever a user-facing feature (a new page, route, form, or auth/role-gated flow) is added or changed and genuinely needs E2E coverage per the strategy above — not just when explicitly asked for tests, but also not reflexively for every change.
+
 ## Writing component tests
 
 Client component tests use **Vitest** + **React Testing Library**, configured in the `test` block of `client/vite.config.ts` (`environment: 'jsdom'`, `globals: true`, `setupFiles: './src/test-setup.ts'` which imports `@testing-library/jest-dom` matchers).
@@ -38,6 +46,15 @@ Both projects define a `Role` type/value for `'ADMIN' | 'AGENT'` and code should
   ```
   Call sites look identical either way (`Role.ADMIN`, `Role.AGENT`) — see `AdminLayout.tsx`, `NavBar.tsx`, `UsersPage.tsx`.
 - The two `Role` definitions are separate, hand-kept-in-sync values, deliberately *not* pulled into the shared `core` package (see "Shared code" below) — the server's real TS `enum` would fail to compile under the client's `erasableSyntaxOnly` setting if imported through `core`, since `tsc` applies the *importing* project's compiler options to every file in its program, not the exporting file's own tsconfig.
+
+## Enum-shaped types: const-object vs. plain union
+
+Not every DB-backed enum needs the `Role`-style const-object treatment above. Which pattern to use depends on whether the code needs a runtime value, not just a type:
+
+- **Use the const-object + derived-type pattern** (like `Role`) when call sites need to *reference* a named value at runtime — comparisons (`session.user.role === Role.ADMIN`), passing it as an argument, etc.
+- **Use a plain union type** (e.g. `client/src/types/ticket-status.ts`: `export type TicketStatus = "OPEN" | "RESOLVED" | "CLOSED"`, and `client/src/types/ticket-category.ts` for `TicketCategory`) when the only need is type-checking — annotating a prop, keying a `Record<...>` lookup (object literal keys are just written as plain strings either way: `{ OPEN: '...', RESOLVED: '...' }`), or displaying the value as-is. No exported runtime object, so there's nothing to reference like `TicketStatus.OPEN` in code — write the string literal directly.
+
+`TicketsTable.tsx` is the reference example: `STATUS_STYLES`/`CATEGORY_LABELS` are `Record<TicketStatus, string>`/`Record<TicketCategory, string>` lookups keyed by plain string literals, since nothing needs to compare against or pass around a named `TicketStatus.OPEN`-style value — only `Role` currently meets the bar for the heavier pattern.
 
 ## Shared code (`core` package)
 

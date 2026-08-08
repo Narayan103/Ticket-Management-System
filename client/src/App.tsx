@@ -4,6 +4,7 @@ import ProtectedLayout from './components/ProtectedLayout'
 import HomePage from './pages/HomePage'
 import LoginPage from './pages/LoginPage'
 import UsersPage from './pages/UsersPage'
+import TicketsPage from './pages/TicketsPage'
 
 function App() {
   return (
@@ -12,6 +13,7 @@ function App() {
         <Route path="/login" element={<LoginPage />} />
         <Route element={<ProtectedLayout />}>
           <Route path="/" element={<HomePage />} />
+          <Route path="/tickets" element={<TicketsPage />} />
           <Route element={<AdminLayout />}>
             <Route path="/users" element={<UsersPage />} />
           </Route>
