@@ -12,3 +12,13 @@ export const inboundEmailSchema = z.object({
 });
 
 export type InboundEmailInput = z.infer<typeof inboundEmailSchema>;
+
+export const ticketSortFieldSchema = z.enum(["subject", "fromName", "category", "status", "createdAt"]);
+export const ticketSortOrderSchema = z.enum(["asc", "desc"]);
+
+export const listTicketsQuerySchema = z.object({
+  sortBy: ticketSortFieldSchema.optional(),
+  sortOrder: ticketSortOrderSchema.optional(),
+});
+
+export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;

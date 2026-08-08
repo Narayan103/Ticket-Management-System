@@ -12,6 +12,10 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Before writing or changing code that touches Bun, Express, React, or Vite APIs, use the `context7` MCP server (`resolve-library-id` then `query-docs`) to pull current documentation rather than relying on training data — this stack (especially Bun) moves fast enough that remembered APIs/flags can be stale or wrong.
 
+## Writing plans
+
+When using plan mode in this repo, keep the plan file concise and high-level — describe the approach, the files touched, and the key decisions/rationale, not full code implementations. A plan should read like a plan (short prose, file names, brief snippets only where a detail is genuinely non-obvious), not a duplicate of the code that implementation will actually produce.
+
 ## Test strategy: component tests first, E2E only when necessary
 
 Default to component tests (Vitest + RTL, see "Writing component tests" below) for anything that's really about a component's own behavior — given some props or mocked data, does it render the right thing, call the right callback, show the right error. Reach for an E2E test only when the behavior genuinely can't be verified without a real server/browser: auth middleware and session handling (`requireAuth`/`requireAdmin`, login/logout, session-cookie behavior), real routing/redirect behavior (`ProtectedLayout`/`AdminLayout`), and flows that span multiple real requests (e.g. create something → it shows up elsewhere without a reload).

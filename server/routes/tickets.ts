@@ -1,12 +1,35 @@
 import { Router } from "express";
+import { listTicketsQuerySchema } from "core";
 import { requireAuth } from "../require-auth";
 import { db } from "../db";
 
 export const ticketsRouter = Router();
 
-ticketsRouter.get("/", requireAuth, async (_req, res) => {
+function buildOrderBy(sortBy: "subject" | "fromName" | "category" | "status" | "createdAt", sortOrder: "asc" | "desc") {
+  switch (sortBy) {
+    case "subject":
+      return { subject: sortOrder };
+    case "fromName":
+      return { fromName: sortOrder };
+    case "category":
+      return { category: sortOrder };
+    case "status":
+      return { status: sortOrder };
+    case "createdAt":
+      return { createdAt: sortOrder };
+  }
+}
+
+ticketsRouter.get("/", requireAuth, async (req, res) => {
+  const parsed = listTicketsQuerySchema.safeParse(req.query);
+  if (!parsed.success) {
+    res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
+    return;
+  }
+  const { sortBy = "createdAt", sortOrder = "desc" } = parsed.data;
+
   const tickets = await db.ticket.findMany({
-    orderBy: { createdAt: "desc" },
+    orderBy: buildOrderBy(sortBy, sortOrder),
     select: {
       id: true,
       subject: true,

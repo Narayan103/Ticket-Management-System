@@ -1,17 +1,23 @@
-import { describe, it, expect } from 'vitest'
+import { describe, it, expect, vi } from 'vitest'
 import { render, screen } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
+import type { SortingState } from '@tanstack/react-table'
 import TicketsTable from './TicketsTable'
+
+const DEFAULT_SORTING: SortingState = [{ id: 'createdAt', desc: true }]
 
 describe('TicketsTable', () => {
   it('shows a loading skeleton when pending', () => {
-    const { container } = render(<TicketsTable tickets={[]} isPending={true} />)
+    const { container } = render(
+      <TicketsTable tickets={[]} isPending={true} sorting={DEFAULT_SORTING} onSortingChange={vi.fn()} />,
+    )
 
     expect(screen.getByRole('table')).toBeInTheDocument()
     expect(container.querySelectorAll('[data-slot="skeleton"]').length).toBeGreaterThan(0)
   })
 
   it('shows an empty state when there are no tickets', () => {
-    render(<TicketsTable tickets={[]} isPending={false} />)
+    render(<TicketsTable tickets={[]} isPending={false} sorting={DEFAULT_SORTING} onSortingChange={vi.fn()} />)
 
     expect(screen.getByText('No tickets found.')).toBeInTheDocument()
     expect(screen.queryByRole('table')).not.toBeInTheDocument()
@@ -21,6 +27,8 @@ describe('TicketsTable', () => {
     render(
       <TicketsTable
         isPending={false}
+        sorting={DEFAULT_SORTING}
+        onSortingChange={vi.fn()}
         tickets={[
           {
             id: 2,
@@ -56,6 +64,8 @@ describe('TicketsTable', () => {
     render(
       <TicketsTable
         isPending={false}
+        sorting={DEFAULT_SORTING}
+        onSortingChange={vi.fn()}
         tickets={[
           { id: 2, subject: 'Newest ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-02-20T00:00:00.000Z' },
           { id: 1, subject: 'Older ticket', status: 'OPEN', category: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-15T00:00:00.000Z' },
@@ -72,6 +82,8 @@ describe('TicketsTable', () => {
     render(
       <TicketsTable
         isPending={false}
+        sorting={DEFAULT_SORTING}
+        onSortingChange={vi.fn()}
         tickets={[
           { id: 1, subject: 'Classified', status: 'OPEN', category: 'TECHNICAL_QUESTION', fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
           { id: 2, subject: 'Unclassified ticket', status: 'OPEN', category: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-16T00:00:00.000Z' },
@@ -81,5 +93,69 @@ describe('TicketsTable', () => {
 
     expect(screen.getByText('Technical Question')).toBeInTheDocument()
     expect(screen.getByText('Unclassified')).toBeInTheDocument()
+  })
+
+  it('clicking a different column header calls onSortingChange with that column, ascending', async () => {
+    const user = userEvent.setup()
+    const onSortingChange = vi.fn()
+    render(
+      <TicketsTable
+        isPending={false}
+        sorting={DEFAULT_SORTING}
+        onSortingChange={onSortingChange}
+        tickets={[
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
+        ]}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /subject/i }))
+
+    expect(onSortingChange).toHaveBeenCalledTimes(1)
+    const updater = onSortingChange.mock.calls[0][0]
+    const result = typeof updater === 'function' ? updater(DEFAULT_SORTING) : updater
+    expect(result).toEqual([{ id: 'subject', desc: false }])
+  })
+
+  it('clicking the currently-sorted column toggles its direction instead of clearing it', async () => {
+    const user = userEvent.setup()
+    const onSortingChange = vi.fn()
+    render(
+      <TicketsTable
+        isPending={false}
+        sorting={[{ id: 'createdAt', desc: true }]}
+        onSortingChange={onSortingChange}
+        tickets={[
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
+        ]}
+      />,
+    )
+
+    await user.click(screen.getByRole('button', { name: /created/i }))
+
+    const updater = onSortingChange.mock.calls[0][0]
+    const result = typeof updater === 'function' ? updater([{ id: 'createdAt', desc: true }]) : updater
+    expect(result).toEqual([{ id: 'createdAt', desc: false }])
+  })
+
+  it('shows a direction icon only on the active column, and a neutral hint icon on the rest', () => {
+    render(
+      <TicketsTable
+        isPending={false}
+        sorting={[{ id: 'createdAt', desc: true }]}
+        onSortingChange={vi.fn()}
+        tickets={[
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
+        ]}
+      />,
+    )
+
+    const createdIcon = screen.getByRole('button', { name: /created/i }).querySelector('svg')
+    const subjectIcon = screen.getByRole('button', { name: /subject/i }).querySelector('svg')
+
+    // Active column (createdAt, desc) shows a direction icon, not the neutral hint.
+    expect(createdIcon).not.toHaveClass('text-neutral-400')
+    // Inactive column (subject) shows the neutral "sortable but not sorted" hint icon.
+    expect(subjectIcon).toHaveClass('text-neutral-400')
   })
 })

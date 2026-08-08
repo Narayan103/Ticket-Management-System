@@ -1,5 +1,16 @@
+import {
+  useReactTable,
+  getCoreRowModel,
+  flexRender,
+  type ColumnDef,
+  type SortingState,
+  type OnChangeFn,
+} from '@tanstack/react-table'
+import { ArrowUpIcon, ArrowDownIcon, ArrowUpDownIcon } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
+import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
+import { Button } from '@/components/ui/button'
 import type { TicketStatus } from '@/types/ticket-status'
 import type { TicketCategory } from '@/types/ticket-category'
 
@@ -13,7 +24,12 @@ export type Ticket = {
   createdAt: string
 }
 
-type TicketsTableProps = { tickets: Ticket[]; isPending: boolean }
+type TicketsTableProps = {
+  tickets: Ticket[]
+  isPending: boolean
+  sorting: SortingState
+  onSortingChange: OnChangeFn<SortingState>
+}
 
 const STATUS_STYLES: Record<TicketStatus, string> = {
   OPEN: 'font-medium text-purple-600 dark:text-purple-400',
@@ -27,41 +43,94 @@ const CATEGORY_LABELS: Record<TicketCategory, string> = {
   REFUND_REQUEST: 'Refund Request',
 }
 
-function TicketsTable({ tickets, isPending }: TicketsTableProps) {
+const columns: ColumnDef<Ticket>[] = [
+  {
+    id: 'subject',
+    header: 'Subject',
+    accessorKey: 'subject',
+    cell: ({ row }) => (
+      <span className="block max-w-70 truncate" title={row.original.subject}>
+        {row.original.subject}
+      </span>
+    ),
+  },
+  {
+    id: 'fromName',
+    header: 'From',
+    accessorKey: 'fromName',
+    cell: ({ row }) => (
+      <div className="flex max-w-45 flex-col">
+        <span className="truncate">{row.original.fromName}</span>
+        <span className="truncate text-xs text-neutral-500 dark:text-neutral-400">{row.original.fromEmail}</span>
+      </div>
+    ),
+  },
+  {
+    id: 'category',
+    header: 'Category',
+    accessorKey: 'category',
+    cell: ({ row }) =>
+      row.original.category ? (
+        CATEGORY_LABELS[row.original.category]
+      ) : (
+        <span className="text-neutral-500 dark:text-neutral-400">Unclassified</span>
+      ),
+  },
+  {
+    id: 'status',
+    header: 'Status',
+    accessorKey: 'status',
+    cell: ({ row }) => <span className={STATUS_STYLES[row.original.status]}>{row.original.status}</span>,
+  },
+  {
+    id: 'createdAt',
+    header: 'Created',
+    accessorKey: 'createdAt',
+    cell: ({ row }) =>
+      new Date(row.original.createdAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }),
+  },
+]
+
+const COLUMN_COUNT = columns.length
+
+function TicketsTable({ tickets, isPending, sorting, onSortingChange }: TicketsTableProps) {
+  const table = useReactTable({
+    data: tickets,
+    columns,
+    state: { sorting },
+    onSortingChange,
+    manualSorting: true,
+    enableMultiSort: false,
+    enableSortingRemoval: false,
+    getCoreRowModel: getCoreRowModel(),
+  })
+
+  const headerGroup = table.getHeaderGroups()[0]
+
   if (isPending) {
     return (
-      <Table className="mt-6">
-        <TableHeader>
-          <TableRow>
-            <TableHead>Subject</TableHead>
-            <TableHead>From</TableHead>
-            <TableHead>Category</TableHead>
-            <TableHead>Status</TableHead>
-            <TableHead>Created</TableHead>
-          </TableRow>
-        </TableHeader>
-        <TableBody>
-          {Array.from({ length: 5 }).map((_, i) => (
-            <TableRow key={i}>
-              <TableCell>
-                <Skeleton className="h-4 w-40" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-40" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-28" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-16" />
-              </TableCell>
-              <TableCell>
-                <Skeleton className="h-4 w-32" />
-              </TableCell>
+      <Card className="mt-6 gap-0 p-0">
+        <Table>
+          <TableHeader>
+            <TableRow>
+              {headerGroup?.headers.map((header) => (
+                <TableHead key={header.id}>{flexRender(header.column.columnDef.header, header.getContext())}</TableHead>
+              ))}
             </TableRow>
-          ))}
-        </TableBody>
-      </Table>
+          </TableHeader>
+          <TableBody>
+            {Array.from({ length: 5 }).map((_, i) => (
+              <TableRow key={i}>
+                {Array.from({ length: COLUMN_COUNT }).map((_, j) => (
+                  <TableCell key={j}>
+                    <Skeleton className="h-4 w-32" />
+                  </TableCell>
+                ))}
+              </TableRow>
+            ))}
+          </TableBody>
+        </Table>
+      </Card>
     )
   }
 
@@ -70,41 +139,43 @@ function TicketsTable({ tickets, isPending }: TicketsTableProps) {
   }
 
   return (
-    <Table className="mt-6">
-      <TableHeader>
-        <TableRow>
-          <TableHead>Subject</TableHead>
-          <TableHead>From</TableHead>
-          <TableHead>Category</TableHead>
-          <TableHead>Status</TableHead>
-          <TableHead>Created</TableHead>
-        </TableRow>
-      </TableHeader>
-      <TableBody>
-        {tickets.map((ticket) => (
-          <TableRow key={ticket.id}>
-            <TableCell>{ticket.subject}</TableCell>
-            <TableCell>
-              <div className="flex flex-col">
-                <span>{ticket.fromName}</span>
-                <span className="text-xs text-neutral-500 dark:text-neutral-400">{ticket.fromEmail}</span>
-              </div>
-            </TableCell>
-            <TableCell>
-              {ticket.category ? (
-                CATEGORY_LABELS[ticket.category]
-              ) : (
-                <span className="text-neutral-500 dark:text-neutral-400">Unclassified</span>
-              )}
-            </TableCell>
-            <TableCell>
-              <span className={STATUS_STYLES[ticket.status]}>{ticket.status}</span>
-            </TableCell>
-            <TableCell>{new Date(ticket.createdAt).toLocaleString()}</TableCell>
-          </TableRow>
-        ))}
-      </TableBody>
-    </Table>
+    <Card className="mt-6 gap-0 p-0">
+      <Table>
+        <TableHeader>
+          {table.getHeaderGroups().map((group) => (
+            <TableRow key={group.id}>
+              {group.headers.map((header) => {
+                const sortDirection = header.column.getIsSorted()
+                return (
+                  <TableHead key={header.id}>
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="-ml-2 h-auto gap-1 px-2 py-1"
+                      onClick={header.column.getToggleSortingHandler()}
+                    >
+                      {flexRender(header.column.columnDef.header, header.getContext())}
+                      {sortDirection === 'asc' && <ArrowUpIcon className="size-3.5" />}
+                      {sortDirection === 'desc' && <ArrowDownIcon className="size-3.5" />}
+                      {!sortDirection && <ArrowUpDownIcon className="size-3.5 text-neutral-400" />}
+                    </Button>
+                  </TableHead>
+                )
+              })}
+            </TableRow>
+          ))}
+        </TableHeader>
+        <TableBody>
+          {table.getRowModel().rows.map((row) => (
+            <TableRow key={row.id}>
+              {row.getVisibleCells().map((cell) => (
+                <TableCell key={cell.id}>{flexRender(cell.column.columnDef.cell, cell.getContext())}</TableCell>
+              ))}
+            </TableRow>
+          ))}
+        </TableBody>
+      </Table>
+    </Card>
   )
 }
 
