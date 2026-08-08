@@ -26,9 +26,22 @@ ticketsRouter.get("/", requireAuth, async (req, res) => {
     res.status(400).json({ error: parsed.error.issues[0]?.message ?? "Invalid input" });
     return;
   }
-  const { sortBy = "createdAt", sortOrder = "desc" } = parsed.data;
+  const { sortBy = "createdAt", sortOrder = "desc", status, category, search } = parsed.data;
 
   const tickets = await db.ticket.findMany({
+    where: {
+      ...(status ? { status } : {}),
+      ...(category === "UNCLASSIFIED" ? { category: null } : category ? { category } : {}),
+      ...(search
+        ? {
+            OR: [
+              { subject: { contains: search, mode: "insensitive" } },
+              { fromName: { contains: search, mode: "insensitive" } },
+              { fromEmail: { contains: search, mode: "insensitive" } },
+            ],
+          }
+        : {}),
+    },
     orderBy: buildOrderBy(sortBy, sortOrder),
     select: {
       id: true,

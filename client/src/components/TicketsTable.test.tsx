@@ -56,8 +56,8 @@ describe('TicketsTable', () => {
     expect(screen.getByText('newer@example.com')).toBeInTheDocument()
     expect(screen.getByText('Older Sender')).toBeInTheDocument()
     expect(screen.getByText('older@example.com')).toBeInTheDocument()
-    expect(screen.getByText('OPEN')).toHaveClass('text-purple-600')
-    expect(screen.getByText('CLOSED')).not.toHaveClass('text-purple-600')
+    expect(screen.getByText('Open')).toHaveClass('text-purple-600')
+    expect(screen.getByText('Closed')).not.toHaveClass('text-purple-600')
   })
 
   it('renders tickets in the order given (sorting is the server\'s responsibility, not the table\'s)', () => {

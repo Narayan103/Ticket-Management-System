@@ -15,10 +15,15 @@ export type InboundEmailInput = z.infer<typeof inboundEmailSchema>;
 
 export const ticketSortFieldSchema = z.enum(["subject", "fromName", "category", "status", "createdAt"]);
 export const ticketSortOrderSchema = z.enum(["asc", "desc"]);
+export const ticketStatusSchema = z.enum(["OPEN", "RESOLVED", "CLOSED"]);
+export const ticketCategoryFilterSchema = z.union([ticketCategorySchema, z.literal("UNCLASSIFIED")]);
 
 export const listTicketsQuerySchema = z.object({
   sortBy: ticketSortFieldSchema.optional(),
   sortOrder: ticketSortOrderSchema.optional(),
+  status: ticketStatusSchema.optional(),
+  category: ticketCategoryFilterSchema.optional(),
+  search: z.string().trim().min(1).optional(),
 });
 
 export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;

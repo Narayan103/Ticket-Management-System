@@ -11,8 +11,8 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@
 import { Card } from '@/components/ui/card'
 import { Skeleton } from '@/components/ui/skeleton'
 import { Button } from '@/components/ui/button'
-import type { TicketStatus } from '@/types/ticket-status'
-import type { TicketCategory } from '@/types/ticket-category'
+import { TICKET_STATUS_LABELS, type TicketStatus } from '@/types/ticket-status'
+import { TICKET_CATEGORY_LABELS, type TicketCategory } from '@/types/ticket-category'
 
 export type Ticket = {
   id: number
@@ -35,12 +35,6 @@ const STATUS_STYLES: Record<TicketStatus, string> = {
   OPEN: 'font-medium text-purple-600 dark:text-purple-400',
   RESOLVED: 'font-medium text-green-600 dark:text-green-400',
   CLOSED: 'text-neutral-500 dark:text-neutral-500',
-}
-
-const CATEGORY_LABELS: Record<TicketCategory, string> = {
-  GENERAL_QUESTION: 'General Question',
-  TECHNICAL_QUESTION: 'Technical Question',
-  REFUND_REQUEST: 'Refund Request',
 }
 
 const columns: ColumnDef<Ticket>[] = [
@@ -71,7 +65,7 @@ const columns: ColumnDef<Ticket>[] = [
     accessorKey: 'category',
     cell: ({ row }) =>
       row.original.category ? (
-        CATEGORY_LABELS[row.original.category]
+        TICKET_CATEGORY_LABELS[row.original.category]
       ) : (
         <span className="text-neutral-500 dark:text-neutral-400">Unclassified</span>
       ),
@@ -80,7 +74,9 @@ const columns: ColumnDef<Ticket>[] = [
     id: 'status',
     header: 'Status',
     accessorKey: 'status',
-    cell: ({ row }) => <span className={STATUS_STYLES[row.original.status]}>{row.original.status}</span>,
+    cell: ({ row }) => (
+      <span className={STATUS_STYLES[row.original.status]}>{TICKET_STATUS_LABELS[row.original.status]}</span>
+    ),
   },
   {
     id: 'createdAt',

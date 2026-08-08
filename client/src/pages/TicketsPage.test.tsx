@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from 'vitest'
 import { screen, waitFor } from '@testing-library/react'
+import userEvent from '@testing-library/user-event'
 import { apiClient } from '@/lib/api-client'
 import { renderWithQuery } from '@/test-utils'
 import TicketsPage from './TicketsPage'
@@ -70,5 +71,29 @@ describe('TicketsPage', () => {
 
     expect(await screen.findByText('Not authorized')).toBeInTheDocument()
     expect(screen.queryByTestId('tickets-table')).not.toBeInTheDocument()
+  })
+
+  it('refetches with search/status/category params once filters change', async () => {
+    mockedGet.mockResolvedValue({ data: { tickets: [] } })
+    const user = userEvent.setup()
+
+    renderTicketsPage()
+
+    await waitFor(() => {
+      expect(mockedGet).toHaveBeenCalledWith('/api/tickets', {
+        params: { sortBy: 'createdAt', sortOrder: 'desc', search: undefined, status: undefined, category: undefined },
+      })
+    })
+
+    await user.type(screen.getByRole('searchbox', { name: 'Search tickets' }), 'refund')
+
+    await waitFor(
+      () => {
+        expect(mockedGet).toHaveBeenCalledWith('/api/tickets', {
+          params: { sortBy: 'createdAt', sortOrder: 'desc', search: 'refund', status: undefined, category: undefined },
+        })
+      },
+      { timeout: 1000 },
+    )
   })
 })
