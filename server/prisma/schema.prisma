@@ -71,6 +71,7 @@ model Reply {
   author     AuthUser?       @relation(fields: [authorId], references: [id], onDelete: SetNull)
   senderType ReplySenderType
   body       String
+  bodyHtml   String?
   createdAt  DateTime        @default(now())
 }
 

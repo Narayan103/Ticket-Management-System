@@ -96,6 +96,7 @@ ticketsRouter.get("/:id", requireAuth, async (req, res) => {
       fromEmail: true,
       fromName: true,
       body: true,
+      bodyHtml: true,
       createdAt: true,
       updatedAt: true,
       assignedTo: { select: { id: true, name: true } },

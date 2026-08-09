@@ -60,6 +60,7 @@ describe('TicketDetailPage', () => {
           fromEmail: 'a@example.com',
           fromName: 'A Customer',
           body: 'I cannot log in to my account.',
+          bodyHtml: null,
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-16T00:00:00.000Z',
           assignedTo: { id: 'agent-1', name: 'Agent Smith' },
@@ -99,6 +100,7 @@ describe('TicketDetailPage', () => {
           fromEmail: 'a@example.com',
           fromName: 'A Customer',
           body: 'I cannot log in to my account.',
+          bodyHtml: null,
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-16T00:00:00.000Z',
           assignedTo: null,
@@ -125,6 +127,7 @@ describe('TicketDetailPage', () => {
           fromEmail: 'a@example.com',
           fromName: 'A Customer',
           body: 'I cannot log in to my account.',
+          bodyHtml: null,
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-16T00:00:00.000Z',
           assignedTo: { id: 'agent-1', name: 'Agent Smith' },
@@ -156,6 +159,7 @@ describe('TicketDetailPage', () => {
             fromEmail: 'a@example.com',
             fromName: 'A Customer',
             body: 'I cannot log in to my account.',
+            bodyHtml: null,
             createdAt: '2024-01-15T00:00:00.000Z',
             updatedAt: '2024-01-16T00:00:00.000Z',
             assignedTo: null,
@@ -182,6 +186,7 @@ describe('TicketDetailPage', () => {
           fromEmail: 'a@example.com',
           fromName: 'A Customer',
           body: 'I cannot log in to my account.',
+          bodyHtml: null,
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-15T00:00:00.000Z',
           assignedTo: null,
@@ -207,6 +212,7 @@ describe('TicketDetailPage', () => {
           fromEmail: 'a@example.com',
           fromName: 'A Customer',
           body: 'I cannot log in to my account.',
+          bodyHtml: null,
           createdAt: '2024-01-15T00:00:00.000Z',
           updatedAt: '2024-01-15T00:00:00.000Z',
           assignedTo: null,
@@ -226,6 +232,34 @@ describe('TicketDetailPage', () => {
     renderTicketDetailPage('1')
 
     expect(await screen.findByText('First reply')).toBeInTheDocument()
+  })
+
+  it('renders a sanitized version of bodyHtml when the ticket has one', async () => {
+    mockedGet.mockResolvedValue({
+      data: {
+        ticket: {
+          id: 1,
+          subject: 'Cannot log in',
+          status: 'OPEN',
+          category: null,
+          fromEmail: 'a@example.com',
+          fromName: 'A Customer',
+          body: 'plain text fallback',
+          bodyHtml: '<p>Hello <strong>there</strong></p><script>alert(1)</script>',
+          createdAt: '2024-01-15T00:00:00.000Z',
+          updatedAt: '2024-01-15T00:00:00.000Z',
+          assignedTo: null,
+          replies: [],
+        },
+      },
+    })
+
+    const { container } = renderTicketDetailPage('1')
+
+    expect(await screen.findByText('there')).toBeInTheDocument()
+    expect(screen.getByText('there').tagName).toBe('STRONG')
+    expect(container.querySelector('script')).not.toBeInTheDocument()
+    expect(screen.queryByText('plain text fallback')).not.toBeInTheDocument()
   })
 
   it('shows the server error message when the ticket is not found', async () => {

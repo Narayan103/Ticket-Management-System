@@ -33,6 +33,7 @@ type Ticket = {
   fromEmail: string
   fromName: string
   body: string
+  bodyHtml: string | null
   createdAt: string
   updatedAt: string
   assignedTo: Agent | null
@@ -86,6 +87,7 @@ function TicketDetailPage() {
                 createdAt={ticket.createdAt}
                 updatedAt={ticket.updatedAt}
                 body={ticket.body}
+                bodyHtml={ticket.bodyHtml}
               />
 
               <Separator className="my-4" />

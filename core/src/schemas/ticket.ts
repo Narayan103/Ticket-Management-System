@@ -3,11 +3,11 @@ import { z } from "zod";
 export const ticketCategorySchema = z.enum(["GENERAL_QUESTION", "TECHNICAL_QUESTION", "REFUND_REQUEST"]);
 
 export const inboundEmailSchema = z.object({
-  fromEmail: z.string().trim().email("Enter a valid email address"),
-  fromName: z.string().trim().min(1, "Name is required"),
-  subject: z.string().trim().min(1, "Subject is required"),
-  body: z.string(),
-  bodyHtml: z.string().optional(),
+  fromEmail: z.string().trim().max(254, "Email must be 254 characters or fewer").email("Enter a valid email address"),
+  fromName: z.string().trim().min(1, "Name is required").max(255, "Name must be 255 characters or fewer"),
+  subject: z.string().trim().min(1, "Subject is required").max(255, "Subject must be 255 characters or fewer"),
+  body: z.string().max(1000, "Body must be 1,000 characters or fewer"),
+  bodyHtml: z.string().max(2000, "Body HTML must be 2,000 characters or fewer").optional(),
   category: ticketCategorySchema.optional(),
 });
 
@@ -23,7 +23,7 @@ export const listTicketsQuerySchema = z.object({
   sortOrder: ticketSortOrderSchema.optional(),
   status: ticketStatusSchema.optional(),
   category: ticketCategoryFilterSchema.optional(),
-  search: z.string().trim().min(1).optional(),
+  search: z.string().trim().min(1).max(200, "Search must be 200 characters or fewer").optional(),
   page: z.coerce.number().int().min(1).optional(),
 });
 
@@ -33,7 +33,7 @@ export const updateTicketSchema = z
   .object({
     status: ticketStatusSchema.optional(),
     category: ticketCategorySchema.nullable().optional(),
-    assignedToId: z.string().nullable().optional(),
+    assignedToId: z.string().max(255, "Assignee id must be 255 characters or fewer").nullable().optional(),
   })
   .refine((data) => data.status !== undefined || data.category !== undefined || data.assignedToId !== undefined, {
     message: "At least one of status, category, or assignedToId must be provided",

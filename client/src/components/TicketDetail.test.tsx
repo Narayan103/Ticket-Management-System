@@ -45,4 +45,30 @@ describe('TicketDetail', () => {
     const bodyEl = container.querySelector('.whitespace-pre-wrap')
     expect(bodyEl?.textContent).toBe('Line one\nLine two')
   })
+
+  it('renders bodyHtml instead of the plain-text body when present', () => {
+    render(<TicketDetail {...defaultProps} bodyHtml="<p>Hello <strong>there</strong></p>" />)
+
+    expect(screen.getByText('there').tagName).toBe('STRONG')
+    expect(screen.queryByText('I cannot log in to my account.')).not.toBeInTheDocument()
+  })
+
+  it('strips script tags and inline event handlers from bodyHtml before rendering', () => {
+    const { container } = render(
+      <TicketDetail
+        {...defaultProps}
+        bodyHtml={'<p onclick="alert(1)">Safe text</p><script>alert(2)</script>'}
+      />,
+    )
+
+    expect(container.querySelector('script')).not.toBeInTheDocument()
+    expect(container.querySelector('[onclick]')).not.toBeInTheDocument()
+    expect(screen.getByText('Safe text')).toBeInTheDocument()
+  })
+
+  it('falls back to the plain-text body when bodyHtml is null', () => {
+    render(<TicketDetail {...defaultProps} bodyHtml={null} />)
+
+    expect(screen.getByText('I cannot log in to my account.')).toBeInTheDocument()
+  })
 })
