@@ -113,16 +113,25 @@ usersRouter.delete("/:id", requireAuth, requireAdmin, async (req, res) => {
     return;
   }
 
-  await db.authUser.update({
-    where: { id },
-    data: {
-      deletedAt: new Date(),
-      // Frees up the original email for reuse — the email column has a hard unique
-      // constraint, so a soft-deleted row would otherwise permanently block anyone
-      // (including a newly created user) from ever using this address again.
-      email: `deleted+${targetUser.id}+${targetUser.email}`,
-    },
-  });
+  await db.$transaction([
+    db.authUser.update({
+      where: { id },
+      data: {
+        deletedAt: new Date(),
+        // Frees up the original email for reuse — the email column has a hard unique
+        // constraint, so a soft-deleted row would otherwise permanently block anyone
+        // (including a newly created user) from ever using this address again.
+        email: `deleted+${targetUser.id}+${targetUser.email}`,
+      },
+    }),
+    // This is a soft delete (the AuthUser row isn't actually removed), so the
+    // schema's onDelete: SetNull on Ticket.assignedToId never fires — unassign
+    // tickets explicitly instead.
+    db.ticket.updateMany({
+      where: { assignedToId: id },
+      data: { assignedToId: null },
+    }),
+  ]);
 
   // Revoke any active sessions immediately — better-auth's own session-check
   // endpoints (used by the client's useSession()) validate purely against the
