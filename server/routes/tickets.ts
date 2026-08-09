@@ -235,3 +235,45 @@ ticketsRouter.post("/:id/polish-reply", requireAuth, async (req, res) => {
 
   res.json({ body: text });
 });
+
+ticketsRouter.post("/:id/summarize", requireAuth, async (req, res) => {
+  const id = parseTicketId(req, res);
+  if (id === undefined) return;
+
+  const ticket = await db.ticket.findUnique({
+    where: { id },
+    select: {
+      subject: true,
+      body: true,
+      fromName: true,
+      replies: {
+        orderBy: { createdAt: "asc" },
+        select: { body: true, senderType: true, author: { select: { name: true } } },
+      },
+    },
+  });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const conversation = [
+    `${ticket.fromName} (customer): ${ticket.body}`,
+    ...ticket.replies.map((reply) => {
+      const speaker = reply.senderType === "AGENT" ? reply.author?.name ?? "Agent" : ticket.fromName;
+      return `${speaker} (${reply.senderType.toLowerCase()}): ${reply.body}`;
+    }),
+  ].join("\n\n");
+
+  const { text } = await generateText({
+    model: google("gemini-3.6-flash"),
+    system:
+      "You summarize customer support ticket conversations for a support agent. " +
+      "Write a brief, neutral summary covering what the customer needs, what's been discussed or resolved so far, " +
+      "and any open questions or next steps. " +
+      "Return only the summary text, with no preamble, commentary, or quotation marks.",
+    prompt: `Ticket subject: ${ticket.subject}\n\nConversation so far:\n${conversation}`,
+  });
+
+  res.json({ summary: text });
+});

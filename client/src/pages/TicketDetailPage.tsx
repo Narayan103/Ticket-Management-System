@@ -10,6 +10,7 @@ import TicketDetail from '@/components/TicketDetail'
 import UpdateTicket from '@/components/UpdateTicket'
 import ReplyForm from '@/components/ReplyForm'
 import ReplyThread from '@/components/ReplyThread'
+import TicketSummary from '@/components/TicketSummary'
 import ErrorMessage from '@/components/ErrorMessage'
 import type { TicketStatus } from '@/types/ticket-status'
 import type { TicketCategory } from '@/types/ticket-category'
@@ -93,7 +94,9 @@ function TicketDetailPage() {
               <Separator className="my-4" />
 
               <div>
-                <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Replies</p>
+                <TicketSummary ticketId={id!} />
+
+                <p className="mt-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">Replies</p>
                 <div className="mt-2">
                   <ReplyThread replies={ticket.replies} />
                 </div>

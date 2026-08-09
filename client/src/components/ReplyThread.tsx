@@ -23,7 +23,7 @@ function ReplyThread({ replies }: ReplyThreadProps) {
           <p className="text-xs text-neutral-500 dark:text-neutral-500">
             {REPLY_SENDER_TYPE_LABELS[reply.senderType]} · {formatDateTime(reply.createdAt)}
           </p>
-          <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-900 dark:text-neutral-50">{reply.body}</p>
+          <p className="mt-2 text-justify text-sm whitespace-pre-wrap text-neutral-900 dark:text-neutral-50">{reply.body}</p>
         </Card>
       ))}
     </div>
