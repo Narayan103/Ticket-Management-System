@@ -13,3 +13,11 @@ if (!inboundEmailWebhookSecret) {
 }
 
 export const INBOUND_EMAIL_WEBHOOK_SECRET = inboundEmailWebhookSecret;
+
+const googleGenerativeAiApiKey = process.env.GOOGLE_GENERATIVE_AI_API_KEY;
+
+if (!googleGenerativeAiApiKey) {
+  throw new Error("GOOGLE_GENERATIVE_AI_API_KEY must be set in the environment");
+}
+
+export const GOOGLE_GENERATIVE_AI_API_KEY = googleGenerativeAiApiKey;

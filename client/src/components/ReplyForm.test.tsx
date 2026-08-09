@@ -24,42 +24,18 @@ describe('ReplyForm', () => {
     expect(screen.getByRole('button', { name: 'Post Reply' })).toBeInTheDocument()
   })
 
-  it('shows a validation error and blocks submission when the reply body is empty', async () => {
+  it('disables the Post Reply button until the reply body has content', async () => {
     const user = userEvent.setup()
     renderWithQuery(<ReplyForm ticketId="1" />)
 
-    await user.click(screen.getByRole('button', { name: 'Post Reply' }))
-
-    expect(await screen.findByText('Reply cannot be empty')).toBeInTheDocument()
-    expect(mockedPost).not.toHaveBeenCalled()
-  })
-
-  it('shows a validation error and blocks submission when the reply body is only whitespace', async () => {
-    const user = userEvent.setup()
-    renderWithQuery(<ReplyForm ticketId="1" />)
-
-    await user.type(screen.getByLabelText('Add a Reply'), '   ')
-    await user.click(screen.getByRole('button', { name: 'Post Reply' }))
-
-    expect(await screen.findByText('Reply cannot be empty')).toBeInTheDocument()
-    expect(mockedPost).not.toHaveBeenCalled()
-  })
-
-  it('marks the textarea as aria-invalid when validation fails, and clears it once corrected', async () => {
-    const user = userEvent.setup()
-    renderWithQuery(<ReplyForm ticketId="1" />)
-
-    await user.click(screen.getByRole('button', { name: 'Post Reply' }))
-    await screen.findByText('Reply cannot be empty')
-    expect(screen.getByLabelText('Add a Reply')).toHaveAttribute('aria-invalid', 'true')
+    expect(screen.getByRole('button', { name: 'Post Reply' })).toBeDisabled()
 
     await user.type(screen.getByLabelText('Add a Reply'), 'Thanks for reaching out')
-    mockedPost.mockResolvedValue({ data: { reply: {} } })
-    await user.click(screen.getByRole('button', { name: 'Post Reply' }))
+    expect(screen.getByRole('button', { name: 'Post Reply' })).not.toBeDisabled()
 
-    await waitFor(() => {
-      expect(screen.getByLabelText('Add a Reply')).toHaveAttribute('aria-invalid', 'false')
-    })
+    await user.clear(screen.getByLabelText('Add a Reply'))
+    await user.type(screen.getByLabelText('Add a Reply'), '   ')
+    expect(screen.getByRole('button', { name: 'Post Reply' })).toBeDisabled()
   })
 
   it('disables the submit button and shows a pending label while the request is in flight', async () => {
@@ -74,9 +50,10 @@ describe('ReplyForm', () => {
     expect(await screen.findByRole('button', { name: 'Posting…' })).toBeDisabled()
 
     resolvePost({ data: { reply: {} } })
-    await waitFor(() => {
-      expect(screen.getByRole('button', { name: 'Post Reply' })).not.toBeDisabled()
-    })
+    await screen.findByRole('button', { name: 'Post Reply' })
+
+    await user.type(screen.getByLabelText('Add a Reply'), 'Another reply')
+    expect(screen.getByRole('button', { name: 'Post Reply' })).not.toBeDisabled()
   })
 
   it('submits the trimmed reply body and resets the form on success', async () => {
@@ -109,5 +86,62 @@ describe('ReplyForm', () => {
     await user.click(screen.getByRole('button', { name: 'Post Reply' }))
 
     expect(await screen.findByText('Failed to post reply')).toBeInTheDocument()
+  })
+
+  it('disables the Polish button until the reply body has content', async () => {
+    const user = userEvent.setup()
+    renderWithQuery(<ReplyForm ticketId="1" />)
+
+    expect(screen.getByRole('button', { name: 'Polish' })).toBeDisabled()
+
+    await user.type(screen.getByLabelText('Add a Reply'), 'thx for the msg')
+    expect(screen.getByRole('button', { name: 'Polish' })).not.toBeDisabled()
+  })
+
+  it('sends the draft reply to the polish endpoint and fills in the improved text', async () => {
+    mockedPost.mockResolvedValue({ data: { body: 'Thank you for reaching out to us.' } })
+    const user = userEvent.setup()
+    renderWithQuery(<ReplyForm ticketId="1" />)
+
+    await user.type(screen.getByLabelText('Add a Reply'), 'thx for the msg')
+    await user.click(screen.getByRole('button', { name: 'Polish' }))
+
+    await waitFor(() => {
+      expect(mockedPost).toHaveBeenCalledWith('/api/tickets/1/polish-reply', { body: 'thx for the msg' })
+    })
+    await waitFor(() => {
+      expect(screen.getByLabelText('Add a Reply')).toHaveValue('Thank you for reaching out to us.')
+    })
+  })
+
+  it('disables the Polish button and shows a pending label while polishing', async () => {
+    let resolvePolish!: (value: { data: { body: string } }) => void
+    mockedPost.mockReturnValue(new Promise((resolve) => { resolvePolish = resolve }))
+    const user = userEvent.setup()
+    renderWithQuery(<ReplyForm ticketId="1" />)
+
+    await user.type(screen.getByLabelText('Add a Reply'), 'thx for the msg')
+    await user.click(screen.getByRole('button', { name: 'Polish' }))
+
+    expect(await screen.findByRole('button', { name: 'Polishing…' })).toBeDisabled()
+
+    resolvePolish({ data: { body: 'Thank you for reaching out.' } })
+    await waitFor(() => {
+      expect(screen.getByRole('button', { name: 'Polish' })).not.toBeDisabled()
+    })
+  })
+
+  it('shows an error message when polishing fails', async () => {
+    mockedPost.mockRejectedValue({
+      isAxiosError: true,
+      response: { data: { error: 'Failed to polish reply' } },
+    })
+    const user = userEvent.setup()
+    renderWithQuery(<ReplyForm ticketId="1" />)
+
+    await user.type(screen.getByLabelText('Add a Reply'), 'thx for the msg')
+    await user.click(screen.getByRole('button', { name: 'Polish' }))
+
+    expect(await screen.findByText('Failed to polish reply')).toBeInTheDocument()
   })
 })

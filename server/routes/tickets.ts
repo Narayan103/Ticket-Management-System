@@ -1,4 +1,6 @@
 import { Router, type Request, type Response } from "express";
+import { generateText } from "ai";
+import { google } from "@ai-sdk/google";
 import { listTicketsQuerySchema, updateTicketSchema, createReplySchema } from "core";
 import { requireAuth } from "../require-auth";
 import { validateBody } from "../lib/validate";
@@ -196,4 +198,40 @@ ticketsRouter.post("/:id/replies", requireAuth, async (req, res) => {
   });
 
   res.status(201).json({ reply });
+});
+
+ticketsRouter.post("/:id/polish-reply", requireAuth, async (req, res) => {
+  const id = parseTicketId(req, res);
+  if (id === undefined) return;
+
+  const parsed = validateBody(createReplySchema, req.body, res);
+  if (!parsed) return;
+
+  const ticket = await db.ticket.findUnique({ where: { id }, select: { subject: true, body: true, fromName: true } });
+  if (!ticket) {
+    res.status(404).json({ error: "Ticket not found" });
+    return;
+  }
+
+  const agentName = req.user?.name;
+  const customerFirstName = ticket.fromName.trim().split(/\s+/)[0];
+
+  const { text } = await generateText({
+    model: google("gemini-3.6-flash"),
+    system:
+      "You polish customer support agent replies before they are sent to a customer. " +
+      "Improve grammar, clarity, and tone while keeping the meaning, facts, and intent unchanged. " +
+      "Do not invent new information or answer on the agent's behalf. " +
+      "Open the reply by addressing the customer by the name it's given. " +
+      "End the reply with a brief, professional sign-off signed with the agent's name it's given. " +
+      "Return only the improved reply text, with no preamble, commentary, or quotation marks.",
+    prompt:
+      `Customer's name: ${customerFirstName}\n` +
+      `Customer's ticket subject: ${ticket.subject}\n` +
+      `Customer's message: ${ticket.body}\n\n` +
+      `Agent's name: ${agentName}\n\n` +
+      `Agent's draft reply to polish:\n${parsed.body}`,
+  });
+
+  res.json({ body: text });
 });

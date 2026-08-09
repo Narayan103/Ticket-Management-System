@@ -16,8 +16,13 @@ function ReplyForm({ ticketId }: ReplyFormProps) {
     register,
     handleSubmit,
     reset,
+    getValues,
+    setValue,
+    watch,
     formState: { errors },
   } = useForm<CreateReplyInput>({ resolver: zodResolver(createReplySchema) })
+
+  const body = watch('body')
 
   const mutation = useMutation({
     mutationFn: (data: CreateReplyInput) => apiClient.post(`/api/tickets/${ticketId}/replies`, data),
@@ -27,9 +32,17 @@ function ReplyForm({ ticketId }: ReplyFormProps) {
     },
   })
 
+  const polishMutation = useMutation({
+    mutationFn: (data: CreateReplyInput) =>
+      apiClient.post<{ body: string }>(`/api/tickets/${ticketId}/polish-reply`, data).then((res) => res.data),
+    onSuccess: (data) => setValue('body', data.body),
+  })
+
   const serverError = getErrorMessage(mutation.error, 'Failed to post reply')
+  const polishError = getErrorMessage(polishMutation.error, 'Failed to polish reply')
 
   const onSubmit = handleSubmit((data) => mutation.mutate(data))
+  const onPolish = () => polishMutation.mutate({ body: getValues('body') })
 
   return (
     <form onSubmit={onSubmit} noValidate>
@@ -45,10 +58,21 @@ function ReplyForm({ ticketId }: ReplyFormProps) {
           <FieldError errors={[errors.body]} />
         </Field>
         {serverError && <FieldError>{serverError}</FieldError>}
+        {polishError && <FieldError>{polishError}</FieldError>}
       </FieldGroup>
-      <Button type="submit" className="mt-3" disabled={mutation.isPending}>
-        {mutation.isPending ? 'Posting…' : 'Post Reply'}
-      </Button>
+      <div className="mt-3 flex gap-2">
+        <Button
+          type="button"
+          variant="outline"
+          onClick={onPolish}
+          disabled={!body?.trim() || polishMutation.isPending || mutation.isPending}
+        >
+          {polishMutation.isPending ? 'Polishing…' : 'Polish'}
+        </Button>
+        <Button type="submit" disabled={!body?.trim() || mutation.isPending || polishMutation.isPending}>
+          {mutation.isPending ? 'Posting…' : 'Post Reply'}
+        </Button>
+      </div>
     </form>
   )
 }
