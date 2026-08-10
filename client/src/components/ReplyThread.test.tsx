@@ -74,7 +74,9 @@ describe('ReplyThread', () => {
       />,
     )
 
-    expect(screen.getByText(`Customer · ${formatDateTime('2024-01-15T10:00:00.000Z')}`)).toBeInTheDocument()
-    expect(screen.getByText(`Agent · ${formatDateTime('2024-01-15T11:00:00.000Z')}`)).toBeInTheDocument()
+    expect(screen.getByText('Customer ·')).toBeInTheDocument()
+    expect(screen.getByText('Agent ·')).toBeInTheDocument()
+    expect(screen.getByText(formatDateTime('2024-01-15T10:00:00.000Z'))).toBeInTheDocument()
+    expect(screen.getByText(formatDateTime('2024-01-15T11:00:00.000Z'))).toBeInTheDocument()
   })
 })

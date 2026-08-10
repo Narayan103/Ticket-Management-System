@@ -84,6 +84,7 @@ ticketsRouter.get("/", requireAuth, async (req, res) => {
         fromEmail: true,
         fromName: true,
         createdAt: true,
+        updatedAt: true,
       },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,

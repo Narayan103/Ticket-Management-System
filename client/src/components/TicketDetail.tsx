@@ -20,32 +20,32 @@ function TicketDetail({ subject, fromName, fromEmail, createdAt, updatedAt, body
 
       <div className="mt-2 space-y-1 text-sm text-muted-foreground">
         <div>
-          <span className="text-neutral-500 dark:text-neutral-500">From: </span>
+          <span className="text-muted-foreground">From: </span>
           {fromName} ({fromEmail})
         </div>
         <div>
-          <span className="text-neutral-500 dark:text-neutral-500">Created: </span>
-          {formatDateTime(createdAt)}
+          <span className="text-muted-foreground">Created: </span>
+          <span className="font-mono tabular-nums">{formatDateTime(createdAt)}</span>
         </div>
         <div>
-          <span className="text-neutral-500 dark:text-neutral-500">Updated: </span>
-          {formatDateTime(updatedAt)}
+          <span className="text-muted-foreground">Updated: </span>
+          <span className="font-mono tabular-nums">{formatDateTime(updatedAt)}</span>
         </div>
       </div>
 
       <Separator className="my-4" />
 
       <div>
-        <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">Message</p>
+        <p className="text-sm font-semibold text-foreground">Message</p>
         <Card className="mt-2 gap-0 p-4">
-          <p className="text-xs text-neutral-500 dark:text-neutral-500">From {fromName}</p>
+          <p className="text-xs text-muted-foreground">From {fromName}</p>
           {bodyHtml ? (
             <div
-              className="mt-2 text-sm text-neutral-900 dark:text-neutral-50"
+              className="mt-2 text-sm text-foreground"
               dangerouslySetInnerHTML={{ __html: DOMPurify.sanitize(bodyHtml) }}
             />
           ) : (
-            <p className="mt-2 whitespace-pre-wrap text-sm text-neutral-900 dark:text-neutral-50">{body}</p>
+            <p className="mt-2 whitespace-pre-wrap text-sm text-foreground">{body}</p>
           )}
         </Card>
       </div>

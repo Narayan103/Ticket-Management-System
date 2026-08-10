@@ -13,7 +13,9 @@ import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
 import TableSkeleton from '@/components/TableSkeleton'
 import EmptyState from '@/components/EmptyState'
+import StatusDot from '@/components/StatusDot'
 import { formatDateTime } from '@/lib/format-date'
+import { isFresh } from '@/lib/is-fresh'
 import { TICKET_STATUS_LABELS, type TicketStatus } from '@/types/ticket-status'
 import { TICKET_CATEGORY_LABELS, type TicketCategory } from '@/types/ticket-category'
 
@@ -25,6 +27,7 @@ export type Ticket = {
   fromEmail: string
   fromName: string
   createdAt: string
+  updatedAt: string
 }
 
 type TicketsTableProps = {
@@ -34,15 +37,13 @@ type TicketsTableProps = {
   onSortingChange: OnChangeFn<SortingState>
 }
 
-const STATUS_STYLES: Record<TicketStatus, string> = {
-  NEW: 'font-medium text-blue-600 dark:text-blue-400',
-  PROCESSING: 'font-medium text-amber-600 dark:text-amber-400',
-  OPEN: 'font-medium text-purple-600 dark:text-purple-400',
-  RESOLVED: 'font-medium text-green-600 dark:text-green-400',
-  CLOSED: 'text-neutral-500 dark:text-neutral-500',
-}
-
 const columns: ColumnDef<Ticket>[] = [
+  {
+    id: 'id',
+    header: 'ID',
+    accessorKey: 'id',
+    cell: ({ row }) => <span className="font-mono text-xs text-muted-foreground">#{row.original.id}</span>,
+  },
   {
     id: 'subject',
     header: 'Subject',
@@ -60,7 +61,7 @@ const columns: ColumnDef<Ticket>[] = [
     cell: ({ row }) => (
       <div className="flex max-w-45 flex-col">
         <span className="truncate">{row.original.fromName}</span>
-        <span className="truncate text-xs text-neutral-500 dark:text-neutral-400">{row.original.fromEmail}</span>
+        <span className="truncate text-xs text-muted-foreground">{row.original.fromEmail}</span>
       </div>
     ),
   },
@@ -72,7 +73,7 @@ const columns: ColumnDef<Ticket>[] = [
       row.original.category ? (
         TICKET_CATEGORY_LABELS[row.original.category]
       ) : (
-        <span className="text-neutral-500 dark:text-neutral-400">Unclassified</span>
+        <span className="text-muted-foreground">Unclassified</span>
       ),
   },
   {
@@ -80,14 +81,20 @@ const columns: ColumnDef<Ticket>[] = [
     header: 'Status',
     accessorKey: 'status',
     cell: ({ row }) => (
-      <span className={STATUS_STYLES[row.original.status]}>{TICKET_STATUS_LABELS[row.original.status]}</span>
+      <span className="flex items-center gap-2">
+        <StatusDot
+          status={row.original.status}
+          isFresh={isFresh(row.original.createdAt, row.original.updatedAt)}
+        />
+        {TICKET_STATUS_LABELS[row.original.status]}
+      </span>
     ),
   },
   {
     id: 'createdAt',
     header: 'Created',
     accessorKey: 'createdAt',
-    cell: ({ row }) => formatDateTime(row.original.createdAt, 'medium'),
+    cell: ({ row }) => <span className="font-mono tabular-nums text-sm">{formatDateTime(row.original.createdAt, 'medium')}</span>,
   },
 ]
 
@@ -147,7 +154,7 @@ function TicketsTable({ tickets, isPending, sorting, onSortingChange }: TicketsT
                       {flexRender(header.column.columnDef.header, header.getContext())}
                       {sortDirection === 'asc' && <ArrowUpIcon className="size-3.5" />}
                       {sortDirection === 'desc' && <ArrowDownIcon className="size-3.5" />}
-                      {!sortDirection && <ArrowUpDownIcon className="size-3.5 text-neutral-400" />}
+                      {!sortDirection && <ArrowUpDownIcon className="size-3.5 text-muted-foreground" />}
                     </Button>
                   </TableHead>
                 )

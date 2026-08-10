@@ -1,6 +1,7 @@
 import { Navigate, Outlet } from 'react-router-dom'
 import { useSession } from '../lib/auth-client'
-import NavBar from './NavBar'
+import AppSidebar from './AppSidebar'
+import { SidebarInset, SidebarProvider, SidebarTrigger } from './ui/sidebar'
 
 function ProtectedLayout() {
   const { data: session, isPending } = useSession()
@@ -14,10 +15,13 @@ function ProtectedLayout() {
   }
 
   return (
-    <>
-      <NavBar />
-      <Outlet />
-    </>
+    <SidebarProvider>
+      <AppSidebar />
+      <SidebarInset>
+        <SidebarTrigger className="m-2" />
+        <Outlet />
+      </SidebarInset>
+    </SidebarProvider>
   )
 }
 

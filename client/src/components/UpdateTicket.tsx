@@ -27,11 +27,11 @@ const UNASSIGNED = 'UNASSIGNED'
 const UNCLASSIFIED = 'UNCLASSIFIED'
 
 const STATUS_BADGE_STYLES: Record<TicketStatus, string> = {
-  NEW: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
-  PROCESSING: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
-  OPEN: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
-  RESOLVED: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300',
-  CLOSED: 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400',
+  NEW: 'bg-signal-new/10 text-signal-new',
+  PROCESSING: 'bg-signal-processing/10 text-signal-processing',
+  OPEN: 'bg-signal-open/10 text-signal-open',
+  RESOLVED: 'bg-signal-resolved/10 text-signal-resolved',
+  CLOSED: 'bg-muted text-muted-foreground',
 }
 
 function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketProps) {
@@ -55,7 +55,7 @@ function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketPr
   return (
     <div className="space-y-4 lg:border-l lg:border-border lg:pl-6">
       <div>
-        <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-500">Status</p>
+        <p className="mb-1 text-xs text-muted-foreground">Status</p>
         <Select
           value={status}
           onValueChange={(value) => updateMutation.mutate({ status: value as AgentSettableTicketStatus })}
@@ -78,7 +78,7 @@ function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketPr
       </div>
 
       <div>
-        <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-500">Category</p>
+        <p className="mb-1 text-xs text-muted-foreground">Category</p>
         <Select
           value={category ?? UNCLASSIFIED}
           onValueChange={(value) =>
@@ -100,7 +100,7 @@ function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketPr
       </div>
 
       <div>
-        <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-500">Assigned to</p>
+        <p className="mb-1 text-xs text-muted-foreground">Assigned to</p>
         {isAdmin ? (
           <Select
             value={assignedTo?.id ?? UNASSIGNED}
@@ -119,11 +119,11 @@ function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketPr
             </SelectContent>
           </Select>
         ) : (
-          <p className="text-sm text-neutral-900 dark:text-neutral-50">{assignedTo?.name ?? 'Unassigned'}</p>
+          <p className="text-sm text-foreground">{assignedTo?.name ?? 'Unassigned'}</p>
         )}
       </div>
 
-      {updateErrorMessage && <p className="text-xs text-red-600 dark:text-red-400">{updateErrorMessage}</p>}
+      {updateErrorMessage && <p className="text-xs text-destructive">{updateErrorMessage}</p>}
     </div>
   )
 }

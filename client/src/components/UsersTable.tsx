@@ -2,6 +2,7 @@ import { PencilIcon, Trash2Icon } from 'lucide-react'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import TableSkeleton from '@/components/TableSkeleton'
 import EmptyState from '@/components/EmptyState'
 import { formatDate } from '@/lib/format-date'
@@ -59,20 +60,19 @@ function UsersTable({ users, isPending, onEditUser, onDeleteUser }: UsersTablePr
         <TableBody>
           {users.map((user) => (
             <TableRow key={user.id}>
-              <TableCell>{user.name}</TableCell>
+              <TableCell>
+                <div className="flex items-center gap-2">
+                  <span className="flex size-7 shrink-0 items-center justify-center rounded-full bg-muted text-xs font-medium text-foreground">
+                    {user.name.charAt(0).toUpperCase()}
+                  </span>
+                  {user.name}
+                </div>
+              </TableCell>
               <TableCell>{user.email}</TableCell>
               <TableCell>
-                <span
-                  className={
-                    user.role === Role.ADMIN
-                      ? 'font-medium text-purple-600 dark:text-purple-400'
-                      : 'text-neutral-700 dark:text-neutral-300'
-                  }
-                >
-                  {user.role}
-                </span>
+                <Badge variant={user.role === Role.ADMIN ? 'secondary' : 'outline'}>{user.role}</Badge>
               </TableCell>
-              <TableCell>{formatDate(user.createdAt)}</TableCell>
+              <TableCell className="font-mono text-sm tabular-nums">{formatDate(user.createdAt)}</TableCell>
               <TableCell>
                 <div className="flex gap-1">
                   <Button

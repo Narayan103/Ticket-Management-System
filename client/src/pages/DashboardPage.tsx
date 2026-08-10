@@ -1,11 +1,13 @@
 import { useQuery } from '@tanstack/react-query'
 import { Bar, BarChart, CartesianGrid, XAxis } from 'recharts'
+import { InboxIcon, PercentIcon, SparklesIcon, TicketIcon, TimerIcon, type LucideIcon } from 'lucide-react'
 import { apiClient } from '@/lib/api-client'
 import { getErrorMessage } from '@/lib/get-error-message'
 import { formatDuration } from '@/lib/format-duration'
-import { Card, CardHeader, CardTitle, CardContent } from '@/components/ui/card'
+import { Card, CardHeader, CardTitle, CardDescription, CardContent } from '@/components/ui/card'
 import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } from '@/components/ui/chart'
 import { Skeleton } from '@/components/ui/skeleton'
+import { cn } from '@/lib/utils'
 import ErrorMessage from '@/components/ErrorMessage'
 
 type TicketsPerDay = { date: string; count: number }
@@ -19,21 +21,34 @@ type TicketStats = {
 }
 
 const CHART_CONFIG: ChartConfig = {
-  count: { label: 'Tickets', color: '#000000' },
+  count: { label: 'Tickets', color: 'var(--primary)' },
 }
 
 function formatChartDate(date: string) {
   return new Date(`${date}T00:00:00`).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })
 }
 
-function StatCard({ label, value }: { label: string; value: string }) {
+function StatCard({
+  label,
+  value,
+  icon: Icon,
+  accent,
+}: {
+  label: string
+  value: string
+  icon: LucideIcon
+  accent: string
+}) {
   return (
     <Card>
       <CardHeader>
-        <CardTitle className="text-sm text-muted-foreground">{label}</CardTitle>
+        <div className={cn('flex size-8 items-center justify-center rounded-md', accent)}>
+          <Icon className="size-4" />
+        </div>
+        <CardTitle className="mt-2 text-sm font-normal text-muted-foreground">{label}</CardTitle>
       </CardHeader>
       <CardContent>
-        <p className="text-2xl font-semibold text-neutral-900 dark:text-neutral-50">{value}</p>
+        <p className="font-mono text-2xl font-semibold tabular-nums text-foreground">{value}</p>
       </CardContent>
     </Card>
   )
@@ -43,7 +58,8 @@ function StatCardSkeleton() {
   return (
     <Card>
       <CardHeader>
-        <Skeleton className="h-4 w-24" />
+        <Skeleton className="size-8 rounded-md" />
+        <Skeleton className="mt-2 h-4 w-24" />
       </CardHeader>
       <CardContent>
         <Skeleton className="h-8 w-16" />
@@ -68,8 +84,9 @@ function DashboardPage() {
     stats && stats.totalTickets > 0 ? Math.round((stats.aiResolvedTickets / stats.totalTickets) * 100) : 0
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
-      <h1 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-50">Dashboard</h1>
+    <main className="max-w-6xl px-6 py-12">
+      <h1 className="font-heading text-2xl font-semibold text-foreground">Dashboard</h1>
+      <p className="mt-1 text-sm text-muted-foreground">Live view of ticket volume and AI resolution performance.</p>
 
       <ErrorMessage message={errorMessage} />
       {!errorMessage && (
@@ -78,11 +95,11 @@ function DashboardPage() {
             Array.from({ length: 5 }).map((_, i) => <StatCardSkeleton key={i} />)
           ) : (
             <>
-              <StatCard label="Total Tickets" value={stats.totalTickets.toString()} />
-              <StatCard label="Open Tickets" value={stats.openTickets.toString()} />
-              <StatCard label="Resolved by AI" value={stats.aiResolvedTickets.toString()} />
-              <StatCard label="% Resolved by AI" value={`${aiResolvedPercent}%`} />
-              <StatCard label="Avg. Resolution Time" value={formatDuration(stats.averageResolutionSeconds)} />
+              <StatCard label="Total Tickets" value={stats.totalTickets.toString()} icon={TicketIcon} accent="bg-primary/10 text-primary" />
+              <StatCard label="Open Tickets" value={stats.openTickets.toString()} icon={InboxIcon} accent="bg-signal-open/10 text-signal-open" />
+              <StatCard label="Resolved by AI" value={stats.aiResolvedTickets.toString()} icon={SparklesIcon} accent="bg-signal-resolved/10 text-signal-resolved" />
+              <StatCard label="% Resolved by AI" value={`${aiResolvedPercent}%`} icon={PercentIcon} accent="bg-ring/10 text-ring" />
+              <StatCard label="Avg. Resolution Time" value={formatDuration(stats.averageResolutionSeconds)} icon={TimerIcon} accent="bg-muted text-muted-foreground" />
             </>
           )}
         </div>
@@ -92,6 +109,7 @@ function DashboardPage() {
         <Card className="mt-6">
           <CardHeader>
             <CardTitle>Tickets per Day (Last 30 Days)</CardTitle>
+            <CardDescription>Volume of new tickets received, by day</CardDescription>
           </CardHeader>
           <CardContent>
             {isPending || !stats ? (

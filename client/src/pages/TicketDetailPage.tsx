@@ -52,7 +52,7 @@ function TicketDetailPage() {
   const errorMessage = getErrorMessage(error, 'Failed to load ticket')
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-6">
+    <main className="max-w-6xl px-6 py-6">
       <Button variant="ghost" size="sm" className="-ml-2" nativeButton={false} render={<Link to="/tickets" />}>
         ← Back to tickets
       </Button>
@@ -96,7 +96,7 @@ function TicketDetailPage() {
               <div>
                 <TicketSummary ticketId={id!} />
 
-                <p className="mt-4 text-sm font-semibold text-neutral-900 dark:text-neutral-50">Replies</p>
+                <p className="mt-4 text-sm font-semibold text-foreground">Replies</p>
                 <div className="mt-2">
                   <ReplyThread replies={ticket.replies} />
                 </div>

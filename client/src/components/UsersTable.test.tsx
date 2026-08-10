@@ -37,8 +37,8 @@ describe('UsersTable', () => {
     expect(screen.getByText('Grace Hopper')).toBeInTheDocument()
     expect(screen.getByText('grace@example.com')).toBeInTheDocument()
 
-    expect(screen.getByText('ADMIN')).toHaveClass('text-purple-600')
-    expect(screen.getByText('AGENT')).not.toHaveClass('text-purple-600')
+    expect(screen.getByText('ADMIN')).toHaveClass('bg-secondary')
+    expect(screen.getByText('AGENT')).not.toHaveClass('bg-secondary')
   })
 
   it('renders an edit button per row and calls onEditUser with that row\'s user when clicked', async () => {

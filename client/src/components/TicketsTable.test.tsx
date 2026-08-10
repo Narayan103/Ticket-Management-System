@@ -44,6 +44,7 @@ describe('TicketsTable', () => {
             fromEmail: 'newer@example.com',
             fromName: 'Newer Sender',
             createdAt: '2024-02-20T00:00:00.000Z',
+            updatedAt: '2024-02-20T00:00:00.000Z',
           },
           {
             id: 1,
@@ -53,6 +54,7 @@ describe('TicketsTable', () => {
             fromEmail: 'older@example.com',
             fromName: 'Older Sender',
             createdAt: '2024-01-15T00:00:00.000Z',
+            updatedAt: '2024-01-15T00:00:00.000Z',
           },
         ]}
       />,
@@ -62,8 +64,8 @@ describe('TicketsTable', () => {
     expect(screen.getByText('newer@example.com')).toBeInTheDocument()
     expect(screen.getByText('Older Sender')).toBeInTheDocument()
     expect(screen.getByText('older@example.com')).toBeInTheDocument()
-    expect(screen.getByText('Open')).toHaveClass('text-purple-600')
-    expect(screen.getByText('Closed')).not.toHaveClass('text-purple-600')
+    expect(screen.getByText('Open').querySelector('[data-testid="status-dot"]')).toHaveAttribute('data-status', 'OPEN')
+    expect(screen.getByText('Closed').querySelector('[data-testid="status-dot"]')).toHaveAttribute('data-status', 'CLOSED')
   })
 
   it('renders tickets in the order given (sorting is the server\'s responsibility, not the table\'s)', () => {
@@ -73,8 +75,8 @@ describe('TicketsTable', () => {
         sorting={DEFAULT_SORTING}
         onSortingChange={vi.fn()}
         tickets={[
-          { id: 2, subject: 'Newest ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-02-20T00:00:00.000Z' },
-          { id: 1, subject: 'Older ticket', status: 'OPEN', category: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-15T00:00:00.000Z' },
+          { id: 2, subject: 'Newest ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-02-20T00:00:00.000Z', updatedAt: '2024-02-20T00:00:00.000Z' },
+          { id: 1, subject: 'Older ticket', status: 'OPEN', category: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -91,8 +93,8 @@ describe('TicketsTable', () => {
         sorting={DEFAULT_SORTING}
         onSortingChange={vi.fn()}
         tickets={[
-          { id: 1, subject: 'Classified', status: 'OPEN', category: 'TECHNICAL_QUESTION', fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
-          { id: 2, subject: 'Unclassified ticket', status: 'OPEN', category: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-16T00:00:00.000Z' },
+          { id: 1, subject: 'Classified', status: 'OPEN', category: 'TECHNICAL_QUESTION', fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
+          { id: 2, subject: 'Unclassified ticket', status: 'OPEN', category: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-16T00:00:00.000Z', updatedAt: '2024-01-16T00:00:00.000Z' },
         ]}
       />,
     )
@@ -110,7 +112,7 @@ describe('TicketsTable', () => {
         sorting={DEFAULT_SORTING}
         onSortingChange={onSortingChange}
         tickets={[
-          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -132,7 +134,7 @@ describe('TicketsTable', () => {
         sorting={[{ id: 'createdAt', desc: true }]}
         onSortingChange={onSortingChange}
         tickets={[
-          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -151,7 +153,7 @@ describe('TicketsTable', () => {
         sorting={DEFAULT_SORTING}
         onSortingChange={vi.fn()}
         tickets={[
-          { id: 42, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
+          { id: 42, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -166,7 +168,7 @@ describe('TicketsTable', () => {
         sorting={[{ id: 'createdAt', desc: true }]}
         onSortingChange={vi.fn()}
         tickets={[
-          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z' },
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -175,8 +177,8 @@ describe('TicketsTable', () => {
     const subjectIcon = screen.getByRole('button', { name: /subject/i }).querySelector('svg')
 
     // Active column (createdAt, desc) shows a direction icon, not the neutral hint.
-    expect(createdIcon).not.toHaveClass('text-neutral-400')
+    expect(createdIcon).not.toHaveClass('text-muted-foreground')
     // Inactive column (subject) shows the neutral "sortable but not sorted" hint icon.
-    expect(subjectIcon).toHaveClass('text-neutral-400')
+    expect(subjectIcon).toHaveClass('text-muted-foreground')
   })
 })

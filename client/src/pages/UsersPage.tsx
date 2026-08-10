@@ -21,9 +21,15 @@ function UsersPage() {
   const errorMessage = getErrorMessage(error, 'Failed to load users')
 
   return (
-    <main className="mx-auto max-w-6xl px-6 py-12">
+    <main className="max-w-6xl px-6 py-12">
       <div className="flex items-center justify-between">
-        <h1 className="text-2xl font-semibold text-neutral-900 dark:text-neutral-50">Users</h1>
+        <div>
+          <h1 className="font-heading text-2xl font-semibold text-foreground">Users</h1>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Manage agent and admin accounts
+            {!isPending && !errorMessage && ` · ${users.length} ${users.length === 1 ? 'user' : 'users'}`}
+          </p>
+        </div>
         <Button onClick={() => setCreateUserOpen(true)}>Create User</Button>
       </div>
 

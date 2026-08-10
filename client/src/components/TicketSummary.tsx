@@ -25,7 +25,7 @@ function TicketSummary({ ticketId }: TicketSummaryProps) {
       {errorMessage && <FieldError>{errorMessage}</FieldError>}
       {mutation.data && (
         <Card className="mt-3 p-4">
-          <p className="text-sm whitespace-pre-wrap text-neutral-900 dark:text-neutral-50">{mutation.data.summary}</p>
+          <p className="text-sm whitespace-pre-wrap text-foreground">{mutation.data.summary}</p>
         </Card>
       )}
     </div>

@@ -19,13 +19,13 @@ function ReplyThread({ replies }: ReplyThreadProps) {
     <div className="space-y-3">
       {replies.map((reply) => (
         <Card key={reply.id} className="gap-0 p-4">
-          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+          <p className="text-sm font-semibold text-foreground">
             {reply.senderType === 'AI' ? 'Support Team' : (reply.author?.name ?? 'Unknown')}
           </p>
-          <p className="text-xs text-neutral-500 dark:text-neutral-500">
-            {REPLY_SENDER_TYPE_LABELS[reply.senderType]} · {formatDateTime(reply.createdAt)}
+          <p className="text-xs text-muted-foreground">
+            {REPLY_SENDER_TYPE_LABELS[reply.senderType]} · <span className="font-mono tabular-nums">{formatDateTime(reply.createdAt)}</span>
           </p>
-          <p className="mt-2 text-justify text-sm whitespace-pre-wrap text-neutral-900 dark:text-neutral-50">{reply.body}</p>
+          <p className="mt-2 text-justify text-sm whitespace-pre-wrap text-foreground">{reply.body}</p>
         </Card>
       ))}
     </div>

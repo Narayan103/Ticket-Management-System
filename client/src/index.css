@@ -1,13 +1,23 @@
 @import "tailwindcss";
 @import "tw-animate-css";
 @import "shadcn/tailwind.css";
-@import "@fontsource-variable/geist";
+@import "@fontsource-variable/archivo";
+@import "@fontsource-variable/jetbrains-mono";
+@import "@fontsource/ibm-plex-sans/400.css";
+@import "@fontsource/ibm-plex-sans/500.css";
+@import "@fontsource/ibm-plex-sans/600.css";
+@import "@fontsource/ibm-plex-sans/700.css";
 
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-    --font-heading: var(--font-sans);
-    --font-sans: 'Geist Variable', sans-serif;
+    --font-heading: 'Archivo Variable', sans-serif;
+    --font-sans: 'IBM Plex Sans', sans-serif;
+    --font-mono: 'JetBrains Mono Variable', monospace;
+    --color-signal-new: var(--signal-new);
+    --color-signal-processing: var(--signal-processing);
+    --color-signal-open: var(--signal-open);
+    --color-signal-resolved: var(--signal-resolved);
     --color-sidebar-ring: var(--sidebar-ring);
     --color-sidebar-border: var(--sidebar-border);
     --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
@@ -25,6 +35,7 @@
     --color-input: var(--input);
     --color-border: var(--border);
     --color-destructive: var(--destructive);
+    --color-destructive-foreground: var(--destructive-foreground);
     --color-accent-foreground: var(--accent-foreground);
     --color-accent: var(--accent);
     --color-muted-foreground: var(--muted-foreground);
@@ -49,72 +60,81 @@
 }
 
 :root {
-    --background: oklch(1 0 0);
-    --foreground: oklch(0.145 0 0);
-    --card: oklch(1 0 0);
-    --card-foreground: oklch(0.145 0 0);
-    --popover: oklch(1 0 0);
-    --popover-foreground: oklch(0.145 0 0);
-    --primary: oklch(0.205 0 0);
-    --primary-foreground: oklch(0.985 0 0);
-    --secondary: oklch(0.97 0 0);
-    --secondary-foreground: oklch(0.205 0 0);
-    --muted: oklch(0.97 0 0);
-    --muted-foreground: oklch(0.556 0 0);
-    --accent: oklch(0.97 0 0);
-    --accent-foreground: oklch(0.205 0 0);
-    --destructive: oklch(0.577 0.245 27.325);
-    --border: oklch(0.922 0 0);
-    --input: oklch(0.922 0 0);
-    --ring: oklch(0.708 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
+    --background: #F4F5F7;
+    --foreground: #10141C;
+    --card: #FFFFFF;
+    --card-foreground: #10141C;
+    --popover: #FFFFFF;
+    --popover-foreground: #10141C;
+    --primary: #F0A93B;
+    --primary-foreground: #10141C;
+    --secondary: #E7EAEF;
+    --secondary-foreground: #10141C;
+    --muted: #E9EBEF;
+    --muted-foreground: #5B6472;
+    --accent: #E5F1F3;
+    --accent-foreground: #10141C;
+    --destructive: #E2604F;
+    --destructive-foreground: #FFFFFF;
+    --border: #D8DEE8;
+    --input: #D8DEE8;
+    --ring: #5FB8C9;
+    --chart-1: #DEDEDE;
+    --chart-2: #8F8F8F;
+    --chart-3: #707070;
+    --chart-4: #5E5E5E;
+    --chart-5: #444444;
     --radius: 0.625rem;
-    --sidebar: oklch(0.985 0 0);
-    --sidebar-foreground: oklch(0.145 0 0);
-    --sidebar-primary: oklch(0.205 0 0);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.97 0 0);
-    --sidebar-accent-foreground: oklch(0.205 0 0);
-    --sidebar-border: oklch(0.922 0 0);
-    --sidebar-ring: oklch(0.708 0 0);
+    --sidebar: #EDEFF3;
+    --sidebar-foreground: #10141C;
+    --sidebar-primary: #F0A93B;
+    --sidebar-primary-foreground: #10141C;
+    --sidebar-accent: #E1E4EA;
+    --sidebar-accent-foreground: #10141C;
+    --sidebar-border: #D8DEE8;
+    --sidebar-ring: #5FB8C9;
+
+    /* Signal tokens: ticket status only. Same value in both modes, like console
+       signal lights — defined once here since .dark never overrides them. */
+    --signal-new: #5FB8C9;
+    --signal-processing: #F0A93B;
+    --signal-open: #6C8CD5;
+    --signal-resolved: #5FA876;
 }
 
 .dark {
-    --background: oklch(0.145 0 0);
-    --foreground: oklch(0.985 0 0);
-    --card: oklch(0.205 0 0);
-    --card-foreground: oklch(0.985 0 0);
-    --popover: oklch(0.205 0 0);
-    --popover-foreground: oklch(0.985 0 0);
-    --primary: oklch(0.922 0 0);
-    --primary-foreground: oklch(0.205 0 0);
-    --secondary: oklch(0.269 0 0);
-    --secondary-foreground: oklch(0.985 0 0);
-    --muted: oklch(0.269 0 0);
-    --muted-foreground: oklch(0.708 0 0);
-    --accent: oklch(0.269 0 0);
-    --accent-foreground: oklch(0.985 0 0);
-    --destructive: oklch(0.704 0.191 22.216);
-    --border: oklch(1 0 0 / 10%);
-    --input: oklch(1 0 0 / 15%);
-    --ring: oklch(0.556 0 0);
-    --chart-1: oklch(0.87 0 0);
-    --chart-2: oklch(0.556 0 0);
-    --chart-3: oklch(0.439 0 0);
-    --chart-4: oklch(0.371 0 0);
-    --chart-5: oklch(0.269 0 0);
-    --sidebar: oklch(0.205 0 0);
-    --sidebar-foreground: oklch(0.985 0 0);
-    --sidebar-primary: oklch(0.488 0.243 264.376);
-    --sidebar-primary-foreground: oklch(0.985 0 0);
-    --sidebar-accent: oklch(0.269 0 0);
-    --sidebar-accent-foreground: oklch(0.985 0 0);
-    --sidebar-border: oklch(1 0 0 / 10%);
-    --sidebar-ring: oklch(0.556 0 0);
+    --background: #10141C;
+    --foreground: #E7EAF0;
+    --card: #171C27;
+    --card-foreground: #E7EAF0;
+    --popover: #171C27;
+    --popover-foreground: #E7EAF0;
+    --primary: #F0A93B;
+    --primary-foreground: #10141C;
+    --secondary: #1F2531;
+    --secondary-foreground: #E7EAF0;
+    --muted: #1B2029;
+    --muted-foreground: #9AA3B2;
+    --accent: #1B2A2E;
+    --accent-foreground: #E7EAF0;
+    --destructive: #E9705F;
+    --destructive-foreground: #10141C;
+    --border: #262C38;
+    --input: #262C38;
+    --ring: #5FB8C9;
+    --chart-1: #DEDEDE;
+    --chart-2: #8F8F8F;
+    --chart-3: #707070;
+    --chart-4: #5E5E5E;
+    --chart-5: #444444;
+    --sidebar: #12161F;
+    --sidebar-foreground: #E7EAF0;
+    --sidebar-primary: #F0A93B;
+    --sidebar-primary-foreground: #10141C;
+    --sidebar-accent: #1B2029;
+    --sidebar-accent-foreground: #E7EAF0;
+    --sidebar-border: #262C38;
+    --sidebar-ring: #5FB8C9;
 }
 
 @layer base {
@@ -127,4 +147,29 @@
   html {
     @apply font-sans;
     }
+}
+
+@layer utilities {
+  /* Signature "signal dot" glow — set `color` to a signal-* token and add
+     this class; the box-shadow rides on currentColor so one keyframe covers
+     every status color. Disabled entirely under reduced-motion, not just
+     slowed down. */
+  @keyframes signal-pulse {
+    0%, 100% {
+      box-shadow: 0 0 0 0 color-mix(in srgb, currentColor 45%, transparent);
+    }
+    50% {
+      box-shadow: 0 0 0 5px color-mix(in srgb, currentColor 0%, transparent);
+    }
+  }
+
+  .animate-signal-pulse {
+    animation: signal-pulse 2s ease-in-out infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-signal-pulse {
+      animation: none;
+    }
+  }
 }
