@@ -1,5 +1,7 @@
 import "./instrument";
 
+import { existsSync } from "fs";
+import path from "path";
 import * as Sentry from "@sentry/bun";
 import express from "express";
 import cors from "cors";
@@ -50,6 +52,20 @@ app.get("/api/health", async (_req, res) => {
     res.status(500).json({ status: "ok", database: "unreachable" });
   }
 });
+
+// Serves the built client (see DEPLOYMENT.md) so this one service handles both
+// the API and the SPA. Only registered when a build actually exists, so local
+// dev (where the client runs separately via `vite dev`) is unaffected.
+const clientDistDir = path.join(import.meta.dir, "../client/dist");
+const clientIndexHtml = path.join(clientDistDir, "index.html");
+
+if (existsSync(clientIndexHtml)) {
+  app.use(express.static(clientDistDir));
+  app.use((req, res, next) => {
+    if (req.method !== "GET" || req.path.startsWith("/api")) return next();
+    res.sendFile(clientIndexHtml);
+  });
+}
 
 Sentry.setupExpressErrorHandler(app);
 
