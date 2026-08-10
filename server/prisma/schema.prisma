@@ -64,6 +64,7 @@ model Ticket {
   replies      Reply[]
   createdAt    DateTime        @default(now())
   updatedAt    DateTime        @updatedAt
+  resolvedAt   DateTime?
 }
 
 model Reply {

@@ -57,12 +57,12 @@ export async function startAutoResolveTicketWorker() {
 
       if (object.canResolve && object.reply.trim()) {
         await db.reply.create({ data: { ticketId, senderType: "AI", body: object.reply } });
-        await db.ticket.update({ where: { id: ticketId }, data: { status: "RESOLVED" } });
+        await db.ticket.update({ where: { id: ticketId }, data: { status: "RESOLVED", resolvedAt: new Date() } });
       } else {
-        await db.ticket.update({ where: { id: ticketId }, data: { status: "OPEN" } });
+        await db.ticket.update({ where: { id: ticketId }, data: { status: "OPEN", resolvedAt: null } });
       }
     } catch (error) {
-      await db.ticket.update({ where: { id: ticketId }, data: { status: "OPEN" } });
+      await db.ticket.update({ where: { id: ticketId }, data: { status: "OPEN", resolvedAt: null } });
       throw error;
     }
   });

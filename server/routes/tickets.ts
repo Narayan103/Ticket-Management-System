@@ -89,6 +89,21 @@ ticketsRouter.get("/", requireAuth, async (req, res) => {
   res.json({ tickets, totalCount, page, pageSize: PAGE_SIZE });
 });
 
+interface TicketStats {
+  totalTickets: number;
+  openTickets: number;
+  aiResolvedTickets: number;
+  averageResolutionSeconds: number | null;
+  ticketsPerDay: { date: string; count: number }[];
+}
+
+ticketsRouter.get("/stats", requireAuth, async (req, res) => {
+  // All the aggregation (including the HIDDEN_TICKET_STATUSES equivalent) lives in the
+  // get_ticket_stats() Postgres function — see its migration for the SQL.
+  const rows = await db.$queryRaw<{ stats: TicketStats }[]>`SELECT get_ticket_stats() AS stats`;
+  res.json(rows[0]!.stats);
+});
+
 ticketsRouter.get("/:id", requireAuth, async (req, res) => {
   const id = parseTicketId(req, res);
   if (id === undefined) return;
@@ -157,6 +172,11 @@ ticketsRouter.patch("/:id", requireAuth, async (req, res) => {
     where: { id },
     data: {
       ...(status !== undefined ? { status } : {}),
+      // Track when a ticket became resolved for average-resolution-time reporting; clear it on
+      // reopen so a stale timestamp doesn't linger. Leave untouched on a CLOSED transition so
+      // closing a resolved ticket doesn't erase when it was actually resolved.
+      ...(status === "RESOLVED" ? { resolvedAt: new Date() } : {}),
+      ...(status === "OPEN" ? { resolvedAt: null } : {}),
       ...(category !== undefined ? { category } : {}),
       ...(assignedToId !== undefined ? { assignedToId } : {}),
     },
