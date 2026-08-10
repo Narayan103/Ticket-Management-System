@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/bun";
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { ticketCategorySchema } from "core";
@@ -23,21 +24,26 @@ export async function startClassifyTicketWorker() {
     if (!job) return;
     const { ticketId, subject, body } = job.data;
 
-    const { object: category } = await generateObject({
-      model: google("gemini-3.1-flash-lite"),
-      output: "enum",
-      enum: [...ticketCategorySchema.options, "UNCLASSIFIED" as const],
-      system:
-        "You classify customer support tickets into the category that best matches the customer's request, " +
-        "based on the ticket's subject and body. " +
-        "If the ticket is gibberish, spam, or otherwise doesn't clearly fit one of the real categories, " +
-        "respond UNCLASSIFIED instead of guessing.",
-      prompt: `Subject: ${subject}\n\nBody: ${body}`,
-    });
+    try {
+      const { object: category } = await generateObject({
+        model: google("gemini-3.1-flash-lite"),
+        output: "enum",
+        enum: [...ticketCategorySchema.options, "UNCLASSIFIED" as const],
+        system:
+          "You classify customer support tickets into the category that best matches the customer's request, " +
+          "based on the ticket's subject and body. " +
+          "If the ticket is gibberish, spam, or otherwise doesn't clearly fit one of the real categories, " +
+          "respond UNCLASSIFIED instead of guessing.",
+        prompt: `Subject: ${subject}\n\nBody: ${body}`,
+      });
 
-    // UNCLASSIFIED means "leave for a human" — the ticket already has category: null from creation.
-    if (category === "UNCLASSIFIED") return;
+      // UNCLASSIFIED means "leave for a human" — the ticket already has category: null from creation.
+      if (category === "UNCLASSIFIED") return;
 
-    await db.ticket.update({ where: { id: ticketId }, data: { category } });
+      await db.ticket.update({ where: { id: ticketId }, data: { category } });
+    } catch (error) {
+      Sentry.captureException(error);
+      throw error;
+    }
   });
 }

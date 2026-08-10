@@ -1,3 +1,4 @@
+import * as Sentry from "@sentry/bun";
 import { generateObject } from "ai";
 import { google } from "@ai-sdk/google";
 import { z } from "zod";
@@ -78,6 +79,7 @@ export async function startAutoResolveTicketWorker() {
         await db.ticket.update({ where: { id: ticketId }, data: { status: "OPEN", resolvedAt: null } });
       }
     } catch (error) {
+      Sentry.captureException(error);
       await db.ticket.update({ where: { id: ticketId }, data: { status: "OPEN", resolvedAt: null } });
       throw error;
     }
