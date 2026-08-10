@@ -35,6 +35,8 @@ type TicketsTableProps = {
 }
 
 const STATUS_STYLES: Record<TicketStatus, string> = {
+  NEW: 'font-medium text-blue-600 dark:text-blue-400',
+  PROCESSING: 'font-medium text-amber-600 dark:text-amber-400',
   OPEN: 'font-medium text-purple-600 dark:text-purple-400',
   RESOLVED: 'font-medium text-green-600 dark:text-green-400',
   CLOSED: 'text-neutral-500 dark:text-neutral-500',

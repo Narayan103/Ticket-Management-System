@@ -4,7 +4,7 @@ import { useSession } from '@/lib/auth-client'
 import { getErrorMessage } from '@/lib/get-error-message'
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select'
 import { Role } from '@/types/role'
-import { TICKET_STATUS_LABELS, type TicketStatus } from '@/types/ticket-status'
+import { TICKET_STATUS_LABELS, AGENT_SETTABLE_TICKET_STATUSES, type TicketStatus } from '@/types/ticket-status'
 import { TICKET_CATEGORY_LABELS, type TicketCategory } from '@/types/ticket-category'
 
 type Agent = { id: string; name: string }
@@ -16,12 +16,19 @@ type UpdateTicketProps = {
   assignedTo: Agent | null
 }
 
-type TicketUpdate = { status: TicketStatus } | { category: TicketCategory | null } | { assignedToId: string | null }
+type AgentSettableTicketStatus = (typeof AGENT_SETTABLE_TICKET_STATUSES)[number]
+
+type TicketUpdate =
+  | { status: AgentSettableTicketStatus }
+  | { category: TicketCategory | null }
+  | { assignedToId: string | null }
 
 const UNASSIGNED = 'UNASSIGNED'
 const UNCLASSIFIED = 'UNCLASSIFIED'
 
 const STATUS_BADGE_STYLES: Record<TicketStatus, string> = {
+  NEW: 'bg-blue-100 text-blue-700 dark:bg-blue-500/20 dark:text-blue-300',
+  PROCESSING: 'bg-amber-100 text-amber-700 dark:bg-amber-500/20 dark:text-amber-300',
   OPEN: 'bg-purple-100 text-purple-700 dark:bg-purple-500/20 dark:text-purple-300',
   RESOLVED: 'bg-green-100 text-green-700 dark:bg-green-500/20 dark:text-green-300',
   CLOSED: 'bg-neutral-100 text-neutral-600 dark:bg-neutral-800 dark:text-neutral-400',
@@ -49,7 +56,10 @@ function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketPr
     <div className="space-y-4 lg:border-l lg:border-border lg:pl-6">
       <div>
         <p className="mb-1 text-xs text-neutral-500 dark:text-neutral-500">Status</p>
-        <Select value={status} onValueChange={(value) => updateMutation.mutate({ status: value as TicketStatus })}>
+        <Select
+          value={status}
+          onValueChange={(value) => updateMutation.mutate({ status: value as AgentSettableTicketStatus })}
+        >
           <SelectTrigger
             className={`w-full ${STATUS_BADGE_STYLES[status]}`}
             aria-label="Ticket status"
@@ -58,9 +68,9 @@ function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketPr
             <SelectValue>{() => TICKET_STATUS_LABELS[status]}</SelectValue>
           </SelectTrigger>
           <SelectContent>
-            {Object.entries(TICKET_STATUS_LABELS).map(([value, label]) => (
+            {AGENT_SETTABLE_TICKET_STATUSES.map((value) => (
               <SelectItem key={value} value={value}>
-                {label}
+                {TICKET_STATUS_LABELS[value]}
               </SelectItem>
             ))}
           </SelectContent>

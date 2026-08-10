@@ -13,6 +13,8 @@ enum Role {
 }
 
 enum TicketStatus {
+  NEW
+  PROCESSING
   OPEN
   RESOLVED
   CLOSED
@@ -27,6 +29,7 @@ enum TicketCategory {
 enum ReplySenderType {
   AGENT
   CUSTOMER
+  AI
 }
 
 model User {
@@ -50,7 +53,7 @@ model Session {
 model Ticket {
   id           Int             @id @default(autoincrement())
   subject      String
-  status       TicketStatus    @default(OPEN)
+  status       TicketStatus    @default(NEW)
   category     TicketCategory?
   fromEmail    String
   fromName     String

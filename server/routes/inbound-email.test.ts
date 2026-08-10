@@ -67,9 +67,9 @@ const emailPayload = {
 };
 
 describe("POST /api/inbound-email", () => {
-  it("creates the ticket and queues it for classification when no category is given", async () => {
+  it("queues classification and auto-resolution when no category is given", async () => {
     createMock.mockResolvedValueOnce({ id: 1, ...emailPayload, category: null });
-    sendMock.mockResolvedValueOnce("job-1");
+    sendMock.mockResolvedValue("job-1");
 
     const res = await postInboundEmail(emailPayload);
 
@@ -80,24 +80,46 @@ describe("POST /api/inbound-email", () => {
       subject: emailPayload.subject,
       body: emailPayload.body,
     });
+    expect(sendMock).toHaveBeenCalledWith("auto-resolve-ticket", {
+      ticketId: 1,
+      fromName: emailPayload.fromName,
+      subject: emailPayload.subject,
+      body: emailPayload.body,
+    });
   });
 
-  it("does not queue classification for a ticket that already has a category", async () => {
+  it("queues only auto-resolution for a ticket that already has a category", async () => {
     createMock.mockResolvedValueOnce({ id: 2, ...emailPayload, category: "GENERAL_QUESTION" });
+    sendMock.mockResolvedValue("job-2");
 
     const res = await postInboundEmail({ ...emailPayload, category: "GENERAL_QUESTION" });
 
     expect(res.status).toBe(201);
-    expect(sendMock).not.toHaveBeenCalled();
+    expect(sendMock).toHaveBeenCalledTimes(1);
+    expect(sendMock).toHaveBeenCalledWith("auto-resolve-ticket", expect.anything());
   });
 
-  it("still responds successfully if queuing the classification job fails", async () => {
+  it("still responds successfully if queuing classification fails", async () => {
     createMock.mockResolvedValueOnce({ id: 3, ...emailPayload, category: null });
-    sendMock.mockRejectedValueOnce(new Error("queue unavailable"));
+    sendMock.mockImplementation((...args: unknown[]) =>
+      args[0] === "classify-ticket" ? Promise.reject(new Error("queue unavailable")) : Promise.resolve("job-3"),
+    );
 
     const res = await postInboundEmail(emailPayload);
 
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ ticket: { id: 3, ...emailPayload, category: null } });
+  });
+
+  it("still responds successfully if queuing auto-resolution fails", async () => {
+    createMock.mockResolvedValueOnce({ id: 4, ...emailPayload, category: null });
+    sendMock.mockImplementation((...args: unknown[]) =>
+      args[0] === "auto-resolve-ticket" ? Promise.reject(new Error("queue unavailable")) : Promise.resolve("job-4"),
+    );
+
+    const res = await postInboundEmail(emailPayload);
+
+    expect(res.status).toBe(201);
+    expect(await res.json()).toEqual({ ticket: { id: 4, ...emailPayload, category: null } });
   });
 });

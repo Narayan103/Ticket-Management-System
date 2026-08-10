@@ -24,7 +24,7 @@ export async function startClassifyTicketWorker() {
     const { ticketId, subject, body } = job.data;
 
     const { object: category } = await generateObject({
-      model: google("gemini-3.6-flash"),
+      model: google("gemini-3.1-flash-lite"),
       output: "enum",
       enum: [...ticketCategorySchema.options, "UNCLASSIFIED" as const],
       system:

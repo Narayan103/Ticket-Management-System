@@ -6,6 +6,9 @@ import { requireAuth } from "../require-auth";
 import { validateBody } from "../lib/validate";
 import { db } from "../db";
 import { Role } from "../types/role";
+import type { TicketStatus } from "../generated/prisma/client";
+
+const HIDDEN_TICKET_STATUSES: TicketStatus[] = ["NEW", "PROCESSING"];
 
 export const ticketsRouter = Router();
 
@@ -50,7 +53,9 @@ ticketsRouter.get("/", requireAuth, async (req, res) => {
   const { sortBy = "createdAt", sortOrder = "desc", status, category, search, page = 1 } = parsed;
 
   const where = {
-    ...(status ? { status } : {}),
+    // NEW/PROCESSING tickets are still being triaged by the AI pipeline and aren't yet
+    // actionable, so they're hidden unless a status filter explicitly asks for them.
+    ...(status ? { status } : { status: { notIn: HIDDEN_TICKET_STATUSES } }),
     ...(category === "UNCLASSIFIED" ? { category: null } : category ? { category } : {}),
     ...(search
       ? {
@@ -213,23 +218,24 @@ ticketsRouter.post("/:id/polish-reply", requireAuth, async (req, res) => {
     return;
   }
 
-  const agentName = req.user?.name;
   const customerFirstName = ticket.fromName.trim().split(/\s+/)[0];
 
   const { text } = await generateText({
-    model: google("gemini-3.6-flash"),
+    model: google("gemini-3.1-flash-lite"),
     system:
       "You polish customer support agent replies before they are sent to a customer. " +
       "Improve grammar, clarity, and tone while keeping the meaning, facts, and intent unchanged. " +
       "Do not invent new information or answer on the agent's behalf. " +
-      "Open the reply by addressing the customer by the name it's given. " +
-      "End the reply with a brief, professional sign-off signed with the agent's name it's given. " +
+      "Write in a professional, customer-friendly tone. Format the reply as multiple short paragraphs separated " +
+      "by a blank line (an actual newline character between paragraphs, not just a space) — never one long " +
+      "paragraph — and use a numbered or bulleted list for any multi-step instructions. " +
+      "Open the reply by addressing the customer by the first name given, on its own line. " +
+      'End with a blank line followed by a brief, professional sign-off signed as "Code with Narayan Support". ' +
       "Return only the improved reply text, with no preamble, commentary, or quotation marks.",
     prompt:
       `Customer's name: ${customerFirstName}\n` +
       `Customer's ticket subject: ${ticket.subject}\n` +
       `Customer's message: ${ticket.body}\n\n` +
-      `Agent's name: ${agentName}\n\n` +
       `Agent's draft reply to polish:\n${parsed.body}`,
   });
 
@@ -266,7 +272,7 @@ ticketsRouter.post("/:id/summarize", requireAuth, async (req, res) => {
   ].join("\n\n");
 
   const { text } = await generateText({
-    model: google("gemini-3.6-flash"),
+    model: google("gemini-3.1-flash-lite"),
     system:
       "You summarize customer support ticket conversations for a support agent. " +
       "Write a brief, neutral summary covering what the customer needs, what's been discussed or resolved so far, " +

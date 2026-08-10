@@ -15,7 +15,10 @@ export type InboundEmailInput = z.infer<typeof inboundEmailSchema>;
 
 export const ticketSortFieldSchema = z.enum(["subject", "fromName", "category", "status", "createdAt"]);
 export const ticketSortOrderSchema = z.enum(["asc", "desc"]);
-export const ticketStatusSchema = z.enum(["OPEN", "RESOLVED", "CLOSED"]);
+export const ticketStatusSchema = z.enum(["NEW", "PROCESSING", "OPEN", "RESOLVED", "CLOSED"]);
+// NEW/PROCESSING are internal states the AI auto-resolution pipeline moves a ticket through —
+// an agent can only manually set a ticket to one of these three.
+export const agentSettableTicketStatusSchema = z.enum(["OPEN", "RESOLVED", "CLOSED"]);
 export const ticketCategoryFilterSchema = z.union([ticketCategorySchema, z.literal("UNCLASSIFIED")]);
 
 export const listTicketsQuerySchema = z.object({
@@ -31,7 +34,7 @@ export type ListTicketsQuery = z.infer<typeof listTicketsQuerySchema>;
 
 export const updateTicketSchema = z
   .object({
-    status: ticketStatusSchema.optional(),
+    status: agentSettableTicketStatusSchema.optional(),
     category: ticketCategorySchema.nullable().optional(),
     assignedToId: z.string().max(255, "Assignee id must be 255 characters or fewer").nullable().optional(),
   })

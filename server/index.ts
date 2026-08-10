@@ -7,12 +7,14 @@ import { requireAuth } from "./require-auth";
 import { db } from "./db";
 import { boss } from "./queue";
 import { startClassifyTicketWorker } from "./jobs/classify-ticket";
+import { startAutoResolveTicketWorker } from "./jobs/auto-resolve-ticket";
 import { usersRouter } from "./routes/users";
 import { inboundEmailRouter } from "./routes/inbound-email";
 import { ticketsRouter } from "./routes/tickets";
 
 await boss.start();
 await startClassifyTicketWorker();
+await startAutoResolveTicketWorker();
 
 const app = express();
 const port = process.env.PORT ? Number(process.env.PORT) : 3001;

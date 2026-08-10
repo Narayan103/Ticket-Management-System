@@ -3,10 +3,12 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 const findUniqueMock = mock<(...args: unknown[]) => Promise<unknown>>();
+const findManyMock = mock<(...args: unknown[]) => Promise<unknown>>();
+const countMock = mock<(...args: unknown[]) => Promise<unknown>>();
 const generateTextMock = mock<(...args: unknown[]) => Promise<unknown>>();
 
 mock.module("../db", () => ({
-  db: { ticket: { findUnique: findUniqueMock } },
+  db: { ticket: { findUnique: findUniqueMock, findMany: findManyMock, count: countMock } },
 }));
 
 mock.module("ai", () => ({
@@ -52,6 +54,8 @@ afterAll(async () => {
 
 beforeEach(() => {
   findUniqueMock.mockReset();
+  findManyMock.mockReset();
+  countMock.mockReset();
   generateTextMock.mockReset();
 });
 
@@ -88,18 +92,20 @@ describe("POST /api/tickets/:id/polish-reply", () => {
     expect(generateTextMock).not.toHaveBeenCalled();
   });
 
-  it("polishes the draft, addressing the customer by first name only and signing with the agent's name", async () => {
+  it("polishes the draft, addressing the customer by first name only and signing as Code with Narayan Support", async () => {
     findUniqueMock.mockResolvedValueOnce({
       subject: "Refund request",
       body: "I never received my refund from last week.",
       fromName: "Jane Doe",
     });
-    generateTextMock.mockResolvedValueOnce({ text: "Hi Jane,\n\nApologies for the delay...\n\nBest,\nAgent Smith" });
+    generateTextMock.mockResolvedValueOnce({
+      text: "Hi Jane,\n\nApologies for the delay...\n\nBest,\nCode with Narayan Support",
+    });
 
     const res = await postPolishReply(42, { body: "will refund u soon, sry for delay" });
 
     expect(res.status).toBe(200);
-    expect(await res.json()).toEqual({ body: "Hi Jane,\n\nApologies for the delay...\n\nBest,\nAgent Smith" });
+    expect(await res.json()).toEqual({ body: "Hi Jane,\n\nApologies for the delay...\n\nBest,\nCode with Narayan Support" });
 
     expect(findUniqueMock).toHaveBeenCalledWith({
       where: { id: 42 },
@@ -112,10 +118,10 @@ describe("POST /api/tickets/:id/polish-reply", () => {
     expect(call.prompt).not.toContain("Jane Doe");
     expect(call.prompt).toContain("Customer's ticket subject: Refund request");
     expect(call.prompt).toContain("Customer's message: I never received my refund from last week.");
-    expect(call.prompt).toContain("Agent's name: Agent Smith");
     expect(call.prompt).toContain("Agent's draft reply to polish:\nwill refund u soon, sry for delay");
-    expect(call.system).toContain("addressing the customer by the name");
-    expect(call.system).toContain("agent's name");
+    expect(call.system).toContain("addressing the customer by the first name");
+    expect(call.system).toContain("Code with Narayan Support");
+    expect(call.system).toContain("professional, customer-friendly tone");
   });
 
   it("trims the draft reply before sending it to the model", async () => {
@@ -201,5 +207,45 @@ describe("POST /api/tickets/:id/summarize", () => {
     expect(await second.json()).toEqual({ summary: "Second summary" });
 
     expect(generateTextMock).toHaveBeenCalledTimes(2);
+  });
+});
+
+function getTickets(query = "") {
+  return fetch(`${baseUrl}/api/tickets${query}`);
+}
+
+describe("GET /api/tickets", () => {
+  it("excludes NEW and PROCESSING tickets by default", async () => {
+    findManyMock.mockResolvedValueOnce([]);
+    countMock.mockResolvedValueOnce(0);
+
+    await getTickets();
+
+    expect(findManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ status: { notIn: ["NEW", "PROCESSING"] } }) }),
+    );
+    expect(countMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ status: { notIn: ["NEW", "PROCESSING"] } }) }),
+    );
+  });
+
+  it("shows only the requested status when a status filter is given, including NEW/PROCESSING", async () => {
+    findManyMock.mockResolvedValueOnce([]);
+    countMock.mockResolvedValueOnce(0);
+
+    await getTickets("?status=PROCESSING");
+
+    expect(findManyMock).toHaveBeenCalledWith(expect.objectContaining({ where: expect.objectContaining({ status: "PROCESSING" }) }));
+  });
+
+  it("combines a status filter with other filters", async () => {
+    findManyMock.mockResolvedValueOnce([]);
+    countMock.mockResolvedValueOnce(0);
+
+    await getTickets("?status=OPEN&category=REFUND_REQUEST");
+
+    expect(findManyMock).toHaveBeenCalledWith(
+      expect.objectContaining({ where: expect.objectContaining({ status: "OPEN", category: "REFUND_REQUEST" }) }),
+    );
   });
 });

@@ -19,7 +19,9 @@ function ReplyThread({ replies }: ReplyThreadProps) {
     <div className="space-y-3">
       {replies.map((reply) => (
         <Card key={reply.id} className="gap-0 p-4">
-          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">{reply.author?.name ?? 'Unknown'}</p>
+          <p className="text-sm font-semibold text-neutral-900 dark:text-neutral-50">
+            {reply.senderType === 'AI' ? 'AI Assistant' : (reply.author?.name ?? 'Unknown')}
+          </p>
           <p className="text-xs text-neutral-500 dark:text-neutral-500">
             {REPLY_SENDER_TYPE_LABELS[reply.senderType]} · {formatDateTime(reply.createdAt)}
           </p>
