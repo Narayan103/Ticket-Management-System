@@ -59,6 +59,12 @@ function postInboundEmail(body: unknown) {
   });
 }
 
+function postSendGridInboundEmail(fields: Record<string, string>) {
+  const form = new FormData();
+  for (const [key, value] of Object.entries(fields)) form.append(key, value);
+  return fetch(`${baseUrl}/api/inbound-email`, { method: "POST", body: form });
+}
+
 const emailPayload = {
   fromEmail: "jane@example.com",
   fromName: "Jane Doe",
@@ -121,5 +127,36 @@ describe("POST /api/inbound-email", () => {
 
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ ticket: { id: 4, ...emailPayload, category: null } });
+  });
+
+  it("accepts a real SendGrid Inbound Parse multipart/form-data payload", async () => {
+    createMock.mockResolvedValueOnce({
+      id: 5,
+      fromEmail: "jane@example.com",
+      fromName: "Jane Doe",
+      subject: "I never received my refund",
+      body: "I was charged twice.",
+      category: null,
+    });
+    sendMock.mockResolvedValue("job-5");
+
+    const res = await postSendGridInboundEmail({
+      from: '"Jane Doe" <jane@example.com>',
+      subject: "I never received my refund",
+      text: "I was charged twice.",
+      html: "<p>I was charged twice.</p>",
+    });
+
+    expect(res.status).toBe(201);
+    expect(createMock).toHaveBeenCalledWith({
+      data: {
+        subject: "I never received my refund",
+        fromEmail: "jane@example.com",
+        fromName: "Jane Doe",
+        body: "I was charged twice.",
+        bodyHtml: "<p>I was charged twice.</p>",
+        category: undefined,
+      },
+    });
   });
 });

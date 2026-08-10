@@ -91,7 +91,10 @@ describe("startAutoResolveTicketWorker", () => {
     });
     // First moves the ticket into PROCESSING, then RESOLVED once the model confidently answers.
     expect(ticketUpdateMock).toHaveBeenNthCalledWith(1, { where: { id: 7 }, data: { status: "PROCESSING" } });
-    expect(ticketUpdateMock).toHaveBeenNthCalledWith(2, { where: { id: 7 }, data: { status: "RESOLVED" } });
+    expect(ticketUpdateMock).toHaveBeenNthCalledWith(2, {
+      where: { id: 7 },
+      data: { status: "RESOLVED", resolvedAt: expect.any(Date) },
+    });
   });
 
   it("moves the ticket to PROCESSING then back to OPEN when the model can't confidently resolve it", async () => {
@@ -103,7 +106,7 @@ describe("startAutoResolveTicketWorker", () => {
 
     expect(replyCreateMock).not.toHaveBeenCalled();
     expect(ticketUpdateMock).toHaveBeenNthCalledWith(1, { where: { id: 8 }, data: { status: "PROCESSING" } });
-    expect(ticketUpdateMock).toHaveBeenNthCalledWith(2, { where: { id: 8 }, data: { status: "OPEN" } });
+    expect(ticketUpdateMock).toHaveBeenNthCalledWith(2, { where: { id: 8 }, data: { status: "OPEN", resolvedAt: null } });
   });
 
   it("moves the ticket back to OPEN if canResolve is true but the reply is blank", async () => {
@@ -114,7 +117,7 @@ describe("startAutoResolveTicketWorker", () => {
     await handler([{ data: { ticketId: 9, fromName: "Sam", subject: "Hi", body: "hello" } }]);
 
     expect(replyCreateMock).not.toHaveBeenCalled();
-    expect(ticketUpdateMock).toHaveBeenNthCalledWith(2, { where: { id: 9 }, data: { status: "OPEN" } });
+    expect(ticketUpdateMock).toHaveBeenNthCalledWith(2, { where: { id: 9 }, data: { status: "OPEN", resolvedAt: null } });
   });
 
   it("moves the ticket back to OPEN and rethrows if classification fails", async () => {
@@ -128,6 +131,6 @@ describe("startAutoResolveTicketWorker", () => {
 
     expect(replyCreateMock).not.toHaveBeenCalled();
     expect(ticketUpdateMock).toHaveBeenNthCalledWith(1, { where: { id: 10 }, data: { status: "PROCESSING" } });
-    expect(ticketUpdateMock).toHaveBeenNthCalledWith(2, { where: { id: 10 }, data: { status: "OPEN" } });
+    expect(ticketUpdateMock).toHaveBeenNthCalledWith(2, { where: { id: 10 }, data: { status: "OPEN", resolvedAt: null } });
   });
 });
