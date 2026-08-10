@@ -3,22 +3,20 @@ import type { Server } from "node:http";
 import type { AddressInfo } from "node:net";
 
 const createMock = mock<(...args: unknown[]) => Promise<unknown>>();
-const updateMock = mock<(...args: unknown[]) => Promise<unknown>>();
-const generateObjectMock = mock<(...args: unknown[]) => Promise<unknown>>();
+const sendMock = mock<(...args: unknown[]) => Promise<unknown>>();
 
 mock.module("../db", () => ({
-  db: { ticket: { create: createMock, update: updateMock } },
+  db: { ticket: { create: createMock } },
 }));
 
-mock.module("ai", () => ({
-  generateObject: generateObjectMock,
-  // Also stub generateText: mock.module replaces the whole "ai" module for the
-  // entire test run, and tickets.test.ts's router needs this export too.
-  generateText: mock<(...args: unknown[]) => Promise<unknown>>(),
-}));
-
-mock.module("@ai-sdk/google", () => ({
-  google: mock(() => "mocked-model"),
+mock.module("../queue", () => ({
+  boss: {
+    send: sendMock,
+    // Also stub createQueue/work: mock.module replaces the whole "../queue" module for the
+    // entire test run, and classify-ticket.test.ts's worker registration needs these too.
+    createQueue: mock<(...args: unknown[]) => Promise<unknown>>(),
+    work: mock<(...args: unknown[]) => Promise<unknown>>(),
+  },
 }));
 
 mock.module("../require-webhook-secret", () => ({
@@ -50,8 +48,7 @@ afterAll(async () => {
 
 beforeEach(() => {
   createMock.mockReset();
-  updateMock.mockReset();
-  generateObjectMock.mockReset();
+  sendMock.mockReset();
 });
 
 function postInboundEmail(body: unknown) {
@@ -70,77 +67,37 @@ const emailPayload = {
 };
 
 describe("POST /api/inbound-email", () => {
-  it("creates the ticket and responds without waiting for classification to finish", async () => {
+  it("creates the ticket and queues it for classification when no category is given", async () => {
     createMock.mockResolvedValueOnce({ id: 1, ...emailPayload, category: null });
-    let resolveClassification!: (value: { object: string }) => void;
-    generateObjectMock.mockReturnValueOnce(
-      new Promise((resolve) => {
-        resolveClassification = resolve;
-      }),
-    );
+    sendMock.mockResolvedValueOnce("job-1");
 
     const res = await postInboundEmail(emailPayload);
 
     expect(res.status).toBe(201);
     expect(await res.json()).toEqual({ ticket: { id: 1, ...emailPayload, category: null } });
-    // The response above already arrived even though this resolves only now.
-    expect(updateMock).not.toHaveBeenCalled();
-
-    resolveClassification({ object: "REFUND_REQUEST" });
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(updateMock).toHaveBeenCalledWith({ where: { id: 1 }, data: { category: "REFUND_REQUEST" } });
+    expect(sendMock).toHaveBeenCalledWith("classify-ticket", {
+      ticketId: 1,
+      subject: emailPayload.subject,
+      body: emailPayload.body,
+    });
   });
 
-  it("does not classify a ticket that already has a category", async () => {
+  it("does not queue classification for a ticket that already has a category", async () => {
     createMock.mockResolvedValueOnce({ id: 2, ...emailPayload, category: "GENERAL_QUESTION" });
 
     const res = await postInboundEmail({ ...emailPayload, category: "GENERAL_QUESTION" });
 
     expect(res.status).toBe(201);
-    await Promise.resolve();
-    expect(generateObjectMock).not.toHaveBeenCalled();
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(sendMock).not.toHaveBeenCalled();
   });
 
-  it("still responds successfully if classification fails", async () => {
+  it("still responds successfully if queuing the classification job fails", async () => {
     createMock.mockResolvedValueOnce({ id: 3, ...emailPayload, category: null });
-    generateObjectMock.mockRejectedValueOnce(new Error("model unavailable"));
+    sendMock.mockRejectedValueOnce(new Error("queue unavailable"));
 
     const res = await postInboundEmail(emailPayload);
 
     expect(res.status).toBe(201);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(updateMock).not.toHaveBeenCalled();
-  });
-
-  it("passes the ticket subject and body to the classifier", async () => {
-    createMock.mockResolvedValueOnce({ id: 4, ...emailPayload, category: null });
-    generateObjectMock.mockResolvedValueOnce({ object: "TECHNICAL_QUESTION" });
-
-    await postInboundEmail(emailPayload);
-    await Promise.resolve();
-    await Promise.resolve();
-
-    expect(generateObjectMock).toHaveBeenCalledTimes(1);
-    const [call] = generateObjectMock.mock.calls[0] as [{ prompt: string; output: string; enum: string[] }];
-    expect(call.prompt).toContain(`Subject: ${emailPayload.subject}`);
-    expect(call.prompt).toContain(`Body: ${emailPayload.body}`);
-    expect(call.output).toBe("enum");
-    expect(call.enum).toEqual(["GENERAL_QUESTION", "TECHNICAL_QUESTION", "REFUND_REQUEST", "UNCLASSIFIED"]);
-  });
-
-  it("leaves the ticket unclassified when the model can't confidently pick a category", async () => {
-    createMock.mockResolvedValueOnce({ id: 5, ...emailPayload, category: null });
-    generateObjectMock.mockResolvedValueOnce({ object: "UNCLASSIFIED" });
-
-    const res = await postInboundEmail(emailPayload);
-
-    expect(res.status).toBe(201);
-    await Promise.resolve();
-    await Promise.resolve();
-    expect(updateMock).not.toHaveBeenCalled();
+    expect(await res.json()).toEqual({ ticket: { id: 3, ...emailPayload, category: null } });
   });
 });
