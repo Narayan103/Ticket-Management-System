@@ -1,6 +1,15 @@
 import { describe, expect, it, mock } from "bun:test";
 
-mock.module("./env", () => ({ INBOUND_EMAIL_WEBHOOK_SECRET: "the-real-secret" }));
+// mock.module replaces the whole "./env" module for the entire test run (shared across every
+// test file that transitively imports env.ts), so every key any other file's real import chain
+// needs must be provided here too — not just the one this file cares about.
+mock.module("./env", () => ({
+  CLIENT_URL: "http://localhost:5173",
+  INBOUND_EMAIL_WEBHOOK_SECRET: "the-real-secret",
+  GOOGLE_GENERATIVE_AI_API_KEY: "test-google-key",
+  SENDGRID_API_KEY: "test-sendgrid-key",
+  SENDGRID_FROM_EMAIL: "support@example.com",
+}));
 
 const { requireWebhookSecret } = await import("./require-webhook-secret");
 

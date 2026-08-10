@@ -21,3 +21,19 @@ if (!googleGenerativeAiApiKey) {
 }
 
 export const GOOGLE_GENERATIVE_AI_API_KEY = googleGenerativeAiApiKey;
+
+const sendgridApiKey = process.env.SENDGRID_API_KEY;
+
+if (!sendgridApiKey) {
+  throw new Error("SENDGRID_API_KEY must be set in the environment");
+}
+
+export const SENDGRID_API_KEY = sendgridApiKey;
+
+const sendgridFromEmail = process.env.SENDGRID_FROM_EMAIL;
+
+if (!sendgridFromEmail) {
+  throw new Error("SENDGRID_FROM_EMAIL must be set in the environment");
+}
+
+export const SENDGRID_FROM_EMAIL = sendgridFromEmail;

@@ -4,6 +4,7 @@ import { google } from "@ai-sdk/google";
 import { listTicketsQuerySchema, updateTicketSchema, createReplySchema } from "core";
 import { requireAuth } from "../require-auth";
 import { validateBody } from "../lib/validate";
+import { sendTicketReplyEmail } from "../lib/send-email";
 import { db } from "../db";
 import { Role } from "../types/role";
 import type { TicketStatus } from "../generated/prisma/client";
@@ -38,8 +39,11 @@ function parseTicketId(req: Request, res: Response): number | undefined {
   return id;
 }
 
-async function getTicketOrNotFound(id: number, res: Response): Promise<{ id: number } | undefined> {
-  const ticket = await db.ticket.findUnique({ where: { id }, select: { id: true } });
+async function getTicketOrNotFound(
+  id: number,
+  res: Response,
+): Promise<{ id: number; fromEmail: string; subject: string } | undefined> {
+  const ticket = await db.ticket.findUnique({ where: { id }, select: { id: true, fromEmail: true, subject: true } });
   if (!ticket) {
     res.status(404).json({ error: "Ticket not found" });
     return undefined;
@@ -201,7 +205,8 @@ ticketsRouter.post("/:id/replies", requireAuth, async (req, res) => {
   const id = parseTicketId(req, res);
   if (id === undefined) return;
 
-  if (!(await getTicketOrNotFound(id, res))) return;
+  const ticket = await getTicketOrNotFound(id, res);
+  if (!ticket) return;
 
   const parsed = validateBody(createReplySchema, req.body, res);
   if (!parsed) return;
@@ -221,6 +226,15 @@ ticketsRouter.post("/:id/replies", requireAuth, async (req, res) => {
       author: { select: { id: true, name: true } },
     },
   });
+
+  // The reply is already persisted regardless of whether the email actually goes out, so a
+  // send failure is logged rather than failing the response — mirrors the queuing-failure
+  // handling in inbound-email.ts.
+  try {
+    await sendTicketReplyEmail({ to: ticket.fromEmail, subject: ticket.subject, body: parsed.body });
+  } catch (error) {
+    console.error(`Failed to send reply email for ticket ${id}:`, error);
+  }
 
   res.status(201).json({ reply });
 });
@@ -249,7 +263,7 @@ ticketsRouter.post("/:id/polish-reply", requireAuth, async (req, res) => {
       "Write in a professional, customer-friendly tone. Format the reply as multiple short paragraphs separated " +
       "by a blank line (an actual newline character between paragraphs, not just a space) — never one long " +
       "paragraph — and use a numbered or bulleted list for any multi-step instructions. " +
-      "Open the reply by addressing the customer by the first name given, on its own line. " +
+      'Open the reply by greeting the customer by the first name given, on its own line (e.g. "Hi Jane," or "Hello Jane,"). ' +
       'End with a blank line followed by a brief, professional sign-off signed as "Code with Narayan Support". ' +
       "Return only the improved reply text, with no preamble, commentary, or quotation marks.",
     prompt:

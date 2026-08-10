@@ -35,7 +35,7 @@ inboundEmailRouter.post("/", requireWebhookSecret, parseMultipart, async (req, r
   }
 
   try {
-    await queueTicketAutoResolution(ticket.id, fromName, subject, body);
+    await queueTicketAutoResolution(ticket.id, fromEmail, fromName, subject, body);
   } catch (error) {
     console.error(`Failed to queue auto-resolution for ticket ${ticket.id}:`, error);
   }

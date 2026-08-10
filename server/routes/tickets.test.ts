@@ -6,9 +6,18 @@ const findUniqueMock = mock<(...args: unknown[]) => Promise<unknown>>();
 const findManyMock = mock<(...args: unknown[]) => Promise<unknown>>();
 const countMock = mock<(...args: unknown[]) => Promise<unknown>>();
 const generateTextMock = mock<(...args: unknown[]) => Promise<unknown>>();
+const replyCreateMock = mock<(...args: unknown[]) => Promise<unknown>>();
+const sendTicketReplyEmailMock = mock<(...args: unknown[]) => Promise<unknown>>();
 
 mock.module("../db", () => ({
-  db: { ticket: { findUnique: findUniqueMock, findMany: findManyMock, count: countMock } },
+  db: {
+    ticket: { findUnique: findUniqueMock, findMany: findManyMock, count: countMock },
+    reply: { create: replyCreateMock },
+  },
+}));
+
+mock.module("../lib/send-email", () => ({
+  sendTicketReplyEmail: sendTicketReplyEmailMock,
 }));
 
 mock.module("ai", () => ({
@@ -57,6 +66,9 @@ beforeEach(() => {
   findManyMock.mockReset();
   countMock.mockReset();
   generateTextMock.mockReset();
+  replyCreateMock.mockReset();
+  sendTicketReplyEmailMock.mockReset();
+  sendTicketReplyEmailMock.mockResolvedValue(undefined);
 });
 
 function postPolishReply(ticketId: string | number, body: unknown) {
@@ -119,7 +131,7 @@ describe("POST /api/tickets/:id/polish-reply", () => {
     expect(call.prompt).toContain("Customer's ticket subject: Refund request");
     expect(call.prompt).toContain("Customer's message: I never received my refund from last week.");
     expect(call.prompt).toContain("Agent's draft reply to polish:\nwill refund u soon, sry for delay");
-    expect(call.system).toContain("addressing the customer by the first name");
+    expect(call.system).toContain("greeting the customer by the first name");
     expect(call.system).toContain("Code with Narayan Support");
     expect(call.system).toContain("professional, customer-friendly tone");
   });
@@ -247,5 +259,76 @@ describe("GET /api/tickets", () => {
     expect(findManyMock).toHaveBeenCalledWith(
       expect.objectContaining({ where: expect.objectContaining({ status: "OPEN", category: "REFUND_REQUEST" }) }),
     );
+  });
+});
+
+function postReply(ticketId: string | number, body: unknown) {
+  return fetch(`${baseUrl}/api/tickets/${ticketId}/replies`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(body),
+  });
+}
+
+describe("POST /api/tickets/:id/replies", () => {
+  it("returns 404 when the ticket does not exist", async () => {
+    findUniqueMock.mockResolvedValueOnce(null);
+
+    const res = await postReply(999, { body: "thanks for reaching out" });
+
+    expect(res.status).toBe(404);
+    expect(replyCreateMock).not.toHaveBeenCalled();
+    expect(sendTicketReplyEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("returns 400 when the reply body is empty", async () => {
+    findUniqueMock.mockResolvedValueOnce({ id: 1, fromEmail: "jane@example.com", subject: "Refund request" });
+
+    const res = await postReply(1, { body: "   " });
+
+    expect(res.status).toBe(400);
+    expect(replyCreateMock).not.toHaveBeenCalled();
+    expect(sendTicketReplyEmailMock).not.toHaveBeenCalled();
+  });
+
+  it("creates the reply and emails the customer at the ticket's fromEmail with a threaded subject", async () => {
+    findUniqueMock.mockResolvedValueOnce({ id: 42, fromEmail: "jane@example.com", subject: "Refund request" });
+    replyCreateMock.mockResolvedValueOnce({
+      id: 5,
+      body: "We've processed your refund.",
+      senderType: "AGENT",
+      createdAt: "2024-01-01T00:00:00.000Z",
+      author: { id: "agent-1", name: "Agent Smith" },
+    });
+
+    const res = await postReply(42, { body: "We've processed your refund." });
+
+    expect(res.status).toBe(201);
+    expect(replyCreateMock).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: { ticketId: 42, authorId: "agent-1", senderType: "AGENT", body: "We've processed your refund." },
+      }),
+    );
+    expect(sendTicketReplyEmailMock).toHaveBeenCalledWith({
+      to: "jane@example.com",
+      subject: "Refund request",
+      body: "We've processed your refund.",
+    });
+  });
+
+  it("still returns 201 if sending the reply email fails", async () => {
+    findUniqueMock.mockResolvedValueOnce({ id: 42, fromEmail: "jane@example.com", subject: "Refund request" });
+    replyCreateMock.mockResolvedValueOnce({
+      id: 5,
+      body: "We've processed your refund.",
+      senderType: "AGENT",
+      createdAt: "2024-01-01T00:00:00.000Z",
+      author: { id: "agent-1", name: "Agent Smith" },
+    });
+    sendTicketReplyEmailMock.mockRejectedValueOnce(new Error("SendGrid unavailable"));
+
+    const res = await postReply(42, { body: "We've processed your refund." });
+
+    expect(res.status).toBe(201);
   });
 });

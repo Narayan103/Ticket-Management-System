@@ -88,6 +88,7 @@ describe("POST /api/inbound-email", () => {
     });
     expect(sendMock).toHaveBeenCalledWith("auto-resolve-ticket", {
       ticketId: 1,
+      fromEmail: emailPayload.fromEmail,
       fromName: emailPayload.fromName,
       subject: emailPayload.subject,
       body: emailPayload.body,
