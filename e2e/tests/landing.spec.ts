@@ -16,7 +16,7 @@ test.describe("landing page", () => {
     await expect(page).toHaveURL("/");
     await expect(page.getByRole("heading", { name: "Sahyog" })).toBeVisible();
 
-    await page.getByRole("link", { name: "Login" }).click();
+    await page.getByRole("button", { name: "Login" }).click();
     await expect(page).toHaveURL("/login");
   });
 
