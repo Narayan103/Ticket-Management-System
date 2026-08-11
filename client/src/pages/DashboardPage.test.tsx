@@ -34,6 +34,12 @@ describe('DashboardPage', () => {
           { date: '2026-08-09', count: 3 },
           { date: '2026-08-10', count: 5 },
         ],
+        categoryBreakdown: [
+          { category: 'GENERAL_QUESTION', count: 20, percentage: 47.6 },
+          { category: 'TECHNICAL_QUESTION', count: 15, percentage: 35.7 },
+          { category: 'REFUND_REQUEST', count: 5, percentage: 11.9 },
+          { category: 'UNCLASSIFIED', count: 2, percentage: 4.8 },
+        ],
       },
     })
 
@@ -49,6 +55,30 @@ describe('DashboardPage', () => {
     expect(screen.getByText('1h 30m')).toBeInTheDocument()
   })
 
+  it('renders the category breakdown percentages once the request resolves', async () => {
+    mockedGet.mockResolvedValue({
+      data: {
+        totalTickets: 42,
+        openTickets: 10,
+        aiResolvedTickets: 21,
+        averageResolutionSeconds: 5400,
+        ticketsPerDay: [],
+        categoryBreakdown: [
+          { category: 'GENERAL_QUESTION', count: 20, percentage: 47.6 },
+          { category: 'TECHNICAL_QUESTION', count: 15, percentage: 35.7 },
+          { category: 'REFUND_REQUEST', count: 5, percentage: 11.9 },
+          { category: 'UNCLASSIFIED', count: 2, percentage: 4.8 },
+        ],
+      },
+    })
+
+    renderWithQuery(<DashboardPage />)
+
+    expect(await screen.findByText('47.6%')).toBeInTheDocument()
+    expect(screen.getByText('GENERAL QUESTION')).toBeInTheDocument()
+    expect(screen.getByText('UNCLASSIFIED')).toBeInTheDocument()
+  })
+
   it('shows a placeholder when there is no resolution data yet', async () => {
     mockedGet.mockResolvedValue({
       data: {
@@ -57,6 +87,7 @@ describe('DashboardPage', () => {
         aiResolvedTickets: 0,
         averageResolutionSeconds: null,
         ticketsPerDay: [],
+        categoryBreakdown: [],
       },
     })
 
@@ -79,6 +110,7 @@ describe('DashboardPage', () => {
           { date: '2026-08-09', count: 3 },
           { date: '2026-08-10', count: 5 },
         ],
+        categoryBreakdown: [],
       },
     })
 

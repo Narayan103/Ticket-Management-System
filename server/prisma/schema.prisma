@@ -32,6 +32,13 @@ enum ReplySenderType {
   AI
 }
 
+enum TicketPriority {
+  LOW
+  MEDIUM
+  HIGH
+  URGENT
+}
+
 model User {
   id           String    @id @default(uuid())
   name         String
@@ -55,6 +62,7 @@ model Ticket {
   subject      String
   status       TicketStatus    @default(NEW)
   category     TicketCategory?
+  priority     TicketPriority  @default(MEDIUM)
   fromEmail    String
   fromName     String
   body         String

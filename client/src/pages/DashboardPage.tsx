@@ -9,8 +9,10 @@ import { ChartContainer, ChartTooltip, ChartTooltipContent, type ChartConfig } f
 import { Skeleton } from '@/components/ui/skeleton'
 import { cn } from '@/lib/utils'
 import ErrorMessage from '@/components/ErrorMessage'
+import { TICKET_CATEGORY_LABELS, type TicketCategory } from '@/types/ticket-category'
 
 type TicketsPerDay = { date: string; count: number }
+type CategoryBreakdown = { category: TicketCategory | 'UNCLASSIFIED'; count: number; percentage: number }
 
 type TicketStats = {
   totalTickets: number
@@ -18,6 +20,19 @@ type TicketStats = {
   aiResolvedTickets: number
   averageResolutionSeconds: number | null
   ticketsPerDay: TicketsPerDay[]
+  categoryBreakdown: CategoryBreakdown[]
+}
+
+const CATEGORY_BREAKDOWN_LABELS: Record<CategoryBreakdown['category'], string> = {
+  UNCLASSIFIED: 'Unclassified',
+  ...TICKET_CATEGORY_LABELS,
+}
+
+const CATEGORY_BREAKDOWN_ACCENTS: Record<CategoryBreakdown['category'], string> = {
+  GENERAL_QUESTION: 'text-signal-open',
+  TECHNICAL_QUESTION: 'text-signal-processing',
+  REFUND_REQUEST: 'text-destructive',
+  UNCLASSIFIED: 'text-muted-foreground',
 }
 
 const CHART_CONFIG: ChartConfig = {
@@ -103,6 +118,34 @@ function DashboardPage() {
             </>
           )}
         </div>
+      )}
+
+      {!errorMessage && (
+        <Card className="mt-6">
+          <CardHeader>
+            <CardTitle>Tickets by Category</CardTitle>
+            <CardDescription>Share of tickets in each category</CardDescription>
+          </CardHeader>
+          <CardContent className="grid grid-cols-2 gap-4 sm:grid-cols-4">
+            {isPending || !stats
+              ? Array.from({ length: 4 }).map((_, i) => (
+                  <div key={i} className="space-y-2">
+                    <Skeleton className="h-3 w-16" />
+                    <Skeleton className="h-7 w-12" />
+                  </div>
+                ))
+              : stats.categoryBreakdown.map((entry) => (
+                  <div key={entry.category}>
+                    <p className={cn('text-xs font-medium', CATEGORY_BREAKDOWN_ACCENTS[entry.category])}>
+                      {CATEGORY_BREAKDOWN_LABELS[entry.category].toUpperCase()}
+                    </p>
+                    <p className="font-mono text-xl font-semibold tabular-nums text-foreground">
+                      {entry.percentage}%
+                    </p>
+                  </div>
+                ))}
+          </CardContent>
+        </Card>
       )}
 
       {!errorMessage && (

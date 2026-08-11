@@ -27,13 +27,13 @@ function LoginPage() {
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) })
 
   if (!isPending && session) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/dashboard" replace />
   }
 
   async function onSubmit(data: LoginFormValues) {
     setFormError('')
     await signIn.email(data, {
-      onSuccess: () => navigate('/', { replace: true }),
+      onSuccess: () => navigate('/dashboard', { replace: true }),
       onError: (ctx) => setFormError(ctx.error.message ?? 'Invalid email or password'),
     })
   }

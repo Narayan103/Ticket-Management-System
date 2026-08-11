@@ -17,7 +17,7 @@ import { signOut, useSession } from '@/lib/auth-client'
 import { Role } from '@/types/role'
 
 const NAV_ITEMS = [
-  { to: '/', label: 'Dashboard', icon: LayoutDashboardIcon, end: true },
+  { to: '/dashboard', label: 'Dashboard', icon: LayoutDashboardIcon, end: true },
   { to: '/tickets', label: 'Tickets', icon: TicketIcon, end: false },
 ]
 
@@ -37,9 +37,9 @@ function AppSidebar() {
   return (
     <Sidebar>
       <SidebarHeader className="px-3 py-3">
-        <Link to="/" className="flex items-center gap-2 px-1 font-heading font-semibold text-sidebar-primary">
+        <Link to="/dashboard" className="flex items-center gap-2 px-1 font-heading font-semibold text-sidebar-primary">
           <RadarIcon className="size-5" aria-hidden />
-          <span>Ticket Management</span>
+          <span>Sahyog</span>
         </Link>
       </SidebarHeader>
       <SidebarContent>

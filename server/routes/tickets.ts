@@ -54,13 +54,15 @@ async function getTicketOrNotFound(
 ticketsRouter.get("/", requireAuth, async (req, res) => {
   const parsed = validateBody(listTicketsQuerySchema, req.query, res);
   if (!parsed) return;
-  const { sortBy = "createdAt", sortOrder = "desc", status, category, search, page = 1 } = parsed;
+  const { sortBy = "createdAt", sortOrder = "desc", status, category, priority, assignedToId, search, page = 1 } = parsed;
 
   const where = {
     // NEW/PROCESSING tickets are still being triaged by the AI pipeline and aren't yet
     // actionable, so they're hidden unless a status filter explicitly asks for them.
     ...(status ? { status } : { status: { notIn: HIDDEN_TICKET_STATUSES } }),
     ...(category === "UNCLASSIFIED" ? { category: null } : category ? { category } : {}),
+    ...(priority ? { priority } : {}),
+    ...(assignedToId === "UNASSIGNED" ? { assignedToId: null } : assignedToId ? { assignedToId } : {}),
     ...(search
       ? {
           OR: [
@@ -81,10 +83,12 @@ ticketsRouter.get("/", requireAuth, async (req, res) => {
         subject: true,
         status: true,
         category: true,
+        priority: true,
         fromEmail: true,
         fromName: true,
         createdAt: true,
         updatedAt: true,
+        assignedTo: { select: { id: true, name: true } },
       },
       skip: (page - 1) * PAGE_SIZE,
       take: PAGE_SIZE,
@@ -100,6 +104,7 @@ interface TicketStats {
   aiResolvedTickets: number;
   averageResolutionSeconds: number | null;
   ticketsPerDay: { date: string; count: number }[];
+  categoryBreakdown: { category: string; count: number; percentage: number }[];
 }
 
 ticketsRouter.get("/stats", requireAuth, async (req, res) => {
@@ -120,6 +125,7 @@ ticketsRouter.get("/:id", requireAuth, async (req, res) => {
       subject: true,
       status: true,
       category: true,
+      priority: true,
       fromEmail: true,
       fromName: true,
       body: true,
@@ -154,7 +160,7 @@ ticketsRouter.patch("/:id", requireAuth, async (req, res) => {
 
   const parsed = validateBody(updateTicketSchema, req.body, res);
   if (!parsed) return;
-  const { status, category, assignedToId } = parsed;
+  const { status, category, priority, assignedToId } = parsed;
 
   // Only admins may (re)assign a ticket — status/category can be changed by any
   // signed-in agent or admin, matching project-scope.md's "agents manage tickets".
@@ -183,6 +189,7 @@ ticketsRouter.patch("/:id", requireAuth, async (req, res) => {
       ...(status === "RESOLVED" ? { resolvedAt: new Date() } : {}),
       ...(status === "OPEN" ? { resolvedAt: null } : {}),
       ...(category !== undefined ? { category } : {}),
+      ...(priority !== undefined ? { priority } : {}),
       ...(assignedToId !== undefined ? { assignedToId } : {}),
     },
     select: {
@@ -190,6 +197,7 @@ ticketsRouter.patch("/:id", requireAuth, async (req, res) => {
       subject: true,
       status: true,
       category: true,
+      priority: true,
       fromEmail: true,
       fromName: true,
       body: true,

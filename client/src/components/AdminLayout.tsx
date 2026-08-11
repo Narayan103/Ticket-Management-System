@@ -10,7 +10,7 @@ function AdminLayout() {
   }
 
   if (session?.user.role !== Role.ADMIN) {
-    return <Navigate to="/" replace />
+    return <Navigate to="/dashboard" replace />
   }
 
   return <Outlet />

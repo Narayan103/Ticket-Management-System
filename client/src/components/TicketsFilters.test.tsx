@@ -1,7 +1,15 @@
-import { describe, it, expect, vi } from 'vitest'
-import { render, screen } from '@testing-library/react'
+import { describe, it, expect, vi, beforeEach } from 'vitest'
+import { screen } from '@testing-library/react'
 import userEvent from '@testing-library/user-event'
+import { apiClient } from '@/lib/api-client'
+import { renderWithQuery } from '@/test-utils'
 import TicketsFilters from './TicketsFilters'
+
+vi.mock('@/lib/api-client', () => ({
+  apiClient: { get: vi.fn() },
+}))
+
+const mockedGet = vi.mocked(apiClient.get)
 
 function renderFilters(valueOverrides: { search?: string } = {}) {
   const props = {
@@ -11,19 +19,30 @@ function renderFilters(valueOverrides: { search?: string } = {}) {
     onStatusChange: vi.fn(),
     category: 'ALL' as const,
     onCategoryChange: vi.fn(),
+    priority: 'ALL' as const,
+    onPriorityChange: vi.fn(),
+    assignee: 'ALL' as const,
+    onAssigneeChange: vi.fn(),
     ...valueOverrides,
   }
-  render(<TicketsFilters {...props} />)
+  renderWithQuery(<TicketsFilters {...props} />)
   return props
 }
 
 describe('TicketsFilters', () => {
-  it('renders a search input, status filter, and category filter', () => {
+  beforeEach(() => {
+    mockedGet.mockReset()
+    mockedGet.mockResolvedValue({ data: { agents: [{ id: 'agent-1', name: 'Agent Smith' }] } })
+  })
+
+  it('renders a search input and all filter dropdowns', () => {
     renderFilters()
 
     expect(screen.getByRole('searchbox', { name: 'Search tickets' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Filter by status' })).toBeInTheDocument()
     expect(screen.getByRole('combobox', { name: 'Filter by category' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Filter by priority' })).toBeInTheDocument()
+    expect(screen.getByRole('combobox', { name: 'Filter by assignee' })).toBeInTheDocument()
   })
 
   it('does not show a "Clear filters" button when no filter is active', () => {
@@ -42,6 +61,8 @@ describe('TicketsFilters', () => {
     expect(props.onSearchChange).toHaveBeenCalledWith('')
     expect(props.onStatusChange).toHaveBeenCalledWith('ALL')
     expect(props.onCategoryChange).toHaveBeenCalledWith('ALL')
+    expect(props.onPriorityChange).toHaveBeenCalledWith('ALL')
+    expect(props.onAssigneeChange).toHaveBeenCalledWith('ALL')
   })
 
   it('calls onSearchChange as the user types', async () => {

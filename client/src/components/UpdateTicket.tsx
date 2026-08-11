@@ -6,6 +6,7 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { Role } from '@/types/role'
 import { TICKET_STATUS_LABELS, AGENT_SETTABLE_TICKET_STATUSES, type TicketStatus } from '@/types/ticket-status'
 import { TICKET_CATEGORY_LABELS, type TicketCategory } from '@/types/ticket-category'
+import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_STYLES, type TicketPriority } from '@/types/ticket-priority'
 
 type Agent = { id: string; name: string }
 
@@ -13,6 +14,7 @@ type UpdateTicketProps = {
   ticketId: string
   status: TicketStatus
   category: TicketCategory | null
+  priority: TicketPriority
   assignedTo: Agent | null
 }
 
@@ -21,6 +23,7 @@ type AgentSettableTicketStatus = (typeof AGENT_SETTABLE_TICKET_STATUSES)[number]
 type TicketUpdate =
   | { status: AgentSettableTicketStatus }
   | { category: TicketCategory | null }
+  | { priority: TicketPriority }
   | { assignedToId: string | null }
 
 const UNASSIGNED = 'UNASSIGNED'
@@ -34,7 +37,7 @@ const STATUS_BADGE_STYLES: Record<TicketStatus, string> = {
   CLOSED: 'bg-muted text-muted-foreground',
 }
 
-function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketProps) {
+function UpdateTicket({ ticketId, status, category, priority, assignedTo }: UpdateTicketProps) {
   const queryClient = useQueryClient()
   const { data: session } = useSession()
   const isAdmin = session?.user.role === Role.ADMIN
@@ -91,6 +94,29 @@ function UpdateTicket({ ticketId, status, category, assignedTo }: UpdateTicketPr
           <SelectContent>
             <SelectItem value={UNCLASSIFIED}>Unclassified</SelectItem>
             {Object.entries(TICKET_CATEGORY_LABELS).map(([value, label]) => (
+              <SelectItem key={value} value={value}>
+                {label}
+              </SelectItem>
+            ))}
+          </SelectContent>
+        </Select>
+      </div>
+
+      <div>
+        <p className="mb-1 text-xs text-muted-foreground">Priority</p>
+        <Select
+          value={priority}
+          onValueChange={(value) => updateMutation.mutate({ priority: value as TicketPriority })}
+        >
+          <SelectTrigger
+            className={`w-full ${TICKET_PRIORITY_BADGE_STYLES[priority]}`}
+            aria-label="Ticket priority"
+            disabled={updateMutation.isPending}
+          >
+            <SelectValue>{() => TICKET_PRIORITY_LABELS[priority]}</SelectValue>
+          </SelectTrigger>
+          <SelectContent>
+            {Object.entries(TICKET_PRIORITY_LABELS).map(([value, label]) => (
               <SelectItem key={value} value={value}>
                 {label}
               </SelectItem>

@@ -172,4 +172,23 @@
       animation: none;
     }
   }
+
+  /* Landing-page hero signature: a rotating radar sweep behind the brand mark, echoing the
+     RadarIcon used as the logo and the console/signal-light vocabulary of the ticket-status
+     dots above. Static (no rotation) under reduced-motion, matching that same convention. */
+  @keyframes radar-sweep {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+
+  .animate-radar-sweep {
+    animation: radar-sweep 6s linear infinite;
+  }
+
+  @media (prefers-reduced-motion: reduce) {
+    .animate-radar-sweep {
+      animation: none;
+    }
+  }
 }

@@ -71,12 +71,12 @@ test.describe("login form", () => {
     expect(unknownEmailMessage).toBe(wrongPasswordMessage);
   });
 
-  test("successful ADMIN login lands on home, shows the Users link, and can reach /users", async ({
+  test("successful ADMIN login lands on /dashboard, shows the Users link, and can reach /users", async ({
     page,
   }) => {
     await loginViaUi(page, ADMIN_USER);
 
-    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Users" })).toBeVisible();
 
     await page.getByRole("link", { name: "Users" }).click();
@@ -84,22 +84,22 @@ test.describe("login form", () => {
     await expect(page.getByRole("heading", { name: "Users" })).toBeVisible();
   });
 
-  test("successful AGENT login lands on home, hides the Users link, and redirects away from /users", async ({
+  test("successful AGENT login lands on /dashboard, hides the Users link, and redirects away from /users", async ({
     page,
   }) => {
     await loginViaUi(page, AGENT_USER);
 
-    await expect(page.getByRole("heading", { name: /welcome back/i })).toBeVisible();
+    await expect(page.getByRole("heading", { name: "Dashboard" })).toBeVisible();
     await expect(page.getByRole("link", { name: "Users" })).not.toBeVisible();
 
     await page.goto("/users");
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/dashboard");
   });
 
-  test("already-authenticated visit to /login redirects to /", async ({ page }) => {
+  test("already-authenticated visit to /login redirects to /dashboard", async ({ page }) => {
     await loginViaUi(page, ADMIN_USER);
 
     await page.goto("/login");
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/dashboard");
   });
 });

@@ -20,12 +20,19 @@ export const ticketStatusSchema = z.enum(["NEW", "PROCESSING", "OPEN", "RESOLVED
 // an agent can only manually set a ticket to one of these three.
 export const agentSettableTicketStatusSchema = z.enum(["OPEN", "RESOLVED", "CLOSED"]);
 export const ticketCategoryFilterSchema = z.union([ticketCategorySchema, z.literal("UNCLASSIFIED")]);
+export const ticketPrioritySchema = z.enum(["LOW", "MEDIUM", "HIGH", "URGENT"]);
+export const assignedToFilterSchema = z.union([
+  z.string().max(255, "Assignee id must be 255 characters or fewer"),
+  z.literal("UNASSIGNED"),
+]);
 
 export const listTicketsQuerySchema = z.object({
   sortBy: ticketSortFieldSchema.optional(),
   sortOrder: ticketSortOrderSchema.optional(),
   status: ticketStatusSchema.optional(),
   category: ticketCategoryFilterSchema.optional(),
+  priority: ticketPrioritySchema.optional(),
+  assignedToId: assignedToFilterSchema.optional(),
   search: z.string().trim().min(1).max(200, "Search must be 200 characters or fewer").optional(),
   page: z.coerce.number().int().min(1).optional(),
 });
@@ -36,10 +43,16 @@ export const updateTicketSchema = z
   .object({
     status: agentSettableTicketStatusSchema.optional(),
     category: ticketCategorySchema.nullable().optional(),
+    priority: ticketPrioritySchema.optional(),
     assignedToId: z.string().max(255, "Assignee id must be 255 characters or fewer").nullable().optional(),
   })
-  .refine((data) => data.status !== undefined || data.category !== undefined || data.assignedToId !== undefined, {
-    message: "At least one of status, category, or assignedToId must be provided",
-  });
+  .refine(
+    (data) =>
+      data.status !== undefined ||
+      data.category !== undefined ||
+      data.priority !== undefined ||
+      data.assignedToId !== undefined,
+    { message: "At least one of status, category, priority, or assignedToId must be provided" },
+  );
 
 export type UpdateTicketInput = z.infer<typeof updateTicketSchema>;

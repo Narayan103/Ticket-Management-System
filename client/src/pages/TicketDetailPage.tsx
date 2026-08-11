@@ -14,6 +14,7 @@ import TicketSummary from '@/components/TicketSummary'
 import ErrorMessage from '@/components/ErrorMessage'
 import type { TicketStatus } from '@/types/ticket-status'
 import type { TicketCategory } from '@/types/ticket-category'
+import type { TicketPriority } from '@/types/ticket-priority'
 import type { ReplySenderType } from '@/types/reply-sender-type'
 
 type Agent = { id: string; name: string }
@@ -31,6 +32,7 @@ type Ticket = {
   subject: string
   status: TicketStatus
   category: TicketCategory | null
+  priority: TicketPriority
   fromEmail: string
   fromName: string
   body: string
@@ -111,6 +113,7 @@ function TicketDetailPage() {
               ticketId={id!}
               status={ticket.status}
               category={ticket.category}
+              priority={ticket.priority}
               assignedTo={ticket.assignedTo}
             />
           </CardContent>

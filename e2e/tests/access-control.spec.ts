@@ -3,8 +3,13 @@ import { loginViaUi } from "./support/login";
 import { ADMIN_USER, AGENT_USER } from "./support/test-users";
 
 test.describe("route protection", () => {
-  test("unauthenticated visit to / redirects to /login", async ({ page }) => {
-    await page.goto("/");
+  // / is public (LandingPage) as of the routing restructure — /dashboard is now the protected
+  // home, so this is the route-gating assertion that used to live at "/". Landing-page-specific
+  // behavior (unauthenticated visitors seeing the public page, authenticated visitors being
+  // bounced off it) lives in landing.spec.ts instead, since it's about LandingPage's own
+  // session-redirect logic, not generic protected-route gating.
+  test("unauthenticated visit to /dashboard redirects to /login", async ({ page }) => {
+    await page.goto("/dashboard");
     await expect(page).toHaveURL("/login");
   });
 
@@ -15,19 +20,19 @@ test.describe("route protection", () => {
     await expect(page).toHaveURL("/login");
   });
 
-  test("unauthenticated visit to an unknown path redirects to /login (via / then ProtectedLayout)", async ({
+  test("unauthenticated visit to an unknown path redirects to /login (via /dashboard then ProtectedLayout)", async ({
     page,
   }) => {
     await page.goto("/this-route-does-not-exist");
     await expect(page).toHaveURL("/login");
   });
 
-  test("authenticated AGENT visiting /users directly is redirected to / by AdminLayout", async ({
+  test("authenticated AGENT visiting /users directly is redirected to /dashboard by AdminLayout", async ({
     page,
   }) => {
     await loginViaUi(page, AGENT_USER);
     await page.goto("/users");
-    await expect(page).toHaveURL("/");
+    await expect(page).toHaveURL("/dashboard");
   });
 
   test("unauthenticated visit to /tickets redirects to /login", async ({ page }) => {

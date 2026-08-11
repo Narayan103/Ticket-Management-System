@@ -90,6 +90,8 @@ describe('TicketsPage', () => {
           search: undefined,
           status: undefined,
           category: undefined,
+          priority: undefined,
+          assignedToId: undefined,
           page: 1,
         },
       })
@@ -106,6 +108,8 @@ describe('TicketsPage', () => {
             search: 'refund',
             status: undefined,
             category: undefined,
+            priority: undefined,
+            assignedToId: undefined,
             page: 1,
           },
         })

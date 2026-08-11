@@ -41,8 +41,10 @@ describe('TicketsTable', () => {
             subject: 'Newest ticket',
             status: 'OPEN',
             category: 'TECHNICAL_QUESTION',
+            priority: 'MEDIUM',
             fromEmail: 'newer@example.com',
             fromName: 'Newer Sender',
+            assignedTo: null,
             createdAt: '2024-02-20T00:00:00.000Z',
             updatedAt: '2024-02-20T00:00:00.000Z',
           },
@@ -51,8 +53,10 @@ describe('TicketsTable', () => {
             subject: 'Older ticket',
             status: 'CLOSED',
             category: null,
+            priority: 'MEDIUM',
             fromEmail: 'older@example.com',
             fromName: 'Older Sender',
+            assignedTo: null,
             createdAt: '2024-01-15T00:00:00.000Z',
             updatedAt: '2024-01-15T00:00:00.000Z',
           },
@@ -75,8 +79,8 @@ describe('TicketsTable', () => {
         sorting={DEFAULT_SORTING}
         onSortingChange={vi.fn()}
         tickets={[
-          { id: 2, subject: 'Newest ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-02-20T00:00:00.000Z', updatedAt: '2024-02-20T00:00:00.000Z' },
-          { id: 1, subject: 'Older ticket', status: 'OPEN', category: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
+          { id: 2, subject: 'Newest ticket', status: 'OPEN', category: null, priority: 'MEDIUM', assignedTo: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-02-20T00:00:00.000Z', updatedAt: '2024-02-20T00:00:00.000Z' },
+          { id: 1, subject: 'Older ticket', status: 'OPEN', category: null, priority: 'MEDIUM', assignedTo: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -93,14 +97,33 @@ describe('TicketsTable', () => {
         sorting={DEFAULT_SORTING}
         onSortingChange={vi.fn()}
         tickets={[
-          { id: 1, subject: 'Classified', status: 'OPEN', category: 'TECHNICAL_QUESTION', fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
-          { id: 2, subject: 'Unclassified ticket', status: 'OPEN', category: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-16T00:00:00.000Z', updatedAt: '2024-01-16T00:00:00.000Z' },
+          { id: 1, subject: 'Classified', status: 'OPEN', category: 'TECHNICAL_QUESTION', priority: 'MEDIUM', assignedTo: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
+          { id: 2, subject: 'Unclassified ticket', status: 'OPEN', category: null, priority: 'MEDIUM', assignedTo: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-16T00:00:00.000Z', updatedAt: '2024-01-16T00:00:00.000Z' },
         ]}
       />,
     )
 
     expect(screen.getByText('Technical Question')).toBeInTheDocument()
     expect(screen.getByText('Unclassified')).toBeInTheDocument()
+  })
+
+  it('renders priority as a human label, and assignee name or "Unassigned"', () => {
+    renderTable(
+      <TicketsTable
+        isPending={false}
+        sorting={DEFAULT_SORTING}
+        onSortingChange={vi.fn()}
+        tickets={[
+          { id: 1, subject: 'Urgent one', status: 'OPEN', category: null, priority: 'URGENT', assignedTo: { id: 'agent-1', name: 'Agent Smith' }, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
+          { id: 2, subject: 'Low one', status: 'OPEN', category: null, priority: 'LOW', assignedTo: null, fromEmail: 'b@example.com', fromName: 'B', createdAt: '2024-01-16T00:00:00.000Z', updatedAt: '2024-01-16T00:00:00.000Z' },
+        ]}
+      />,
+    )
+
+    expect(screen.getByText('Urgent')).toBeInTheDocument()
+    expect(screen.getByText('Low')).toBeInTheDocument()
+    expect(screen.getByText('Agent Smith')).toBeInTheDocument()
+    expect(screen.getByText('Unassigned')).toBeInTheDocument()
   })
 
   it('clicking a different column header calls onSortingChange with that column, ascending', async () => {
@@ -112,7 +135,7 @@ describe('TicketsTable', () => {
         sorting={DEFAULT_SORTING}
         onSortingChange={onSortingChange}
         tickets={[
-          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, priority: 'MEDIUM', assignedTo: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -134,7 +157,7 @@ describe('TicketsTable', () => {
         sorting={[{ id: 'createdAt', desc: true }]}
         onSortingChange={onSortingChange}
         tickets={[
-          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, priority: 'MEDIUM', assignedTo: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -153,7 +176,7 @@ describe('TicketsTable', () => {
         sorting={DEFAULT_SORTING}
         onSortingChange={vi.fn()}
         tickets={[
-          { id: 42, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
+          { id: 42, subject: 'A ticket', status: 'OPEN', category: null, priority: 'MEDIUM', assignedTo: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )
@@ -168,7 +191,7 @@ describe('TicketsTable', () => {
         sorting={[{ id: 'createdAt', desc: true }]}
         onSortingChange={vi.fn()}
         tickets={[
-          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
+          { id: 1, subject: 'A ticket', status: 'OPEN', category: null, priority: 'MEDIUM', assignedTo: null, fromEmail: 'a@example.com', fromName: 'A', createdAt: '2024-01-15T00:00:00.000Z', updatedAt: '2024-01-15T00:00:00.000Z' },
         ]}
       />,
     )

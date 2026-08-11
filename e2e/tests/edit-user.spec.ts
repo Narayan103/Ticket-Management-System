@@ -164,11 +164,11 @@ test.describe("Edit User modal", () => {
 // Regression check: /users has more surface area now (the per-row Edit button/modal), but the
 // underlying route gating is unchanged - AdminLayout still redirects a non-admin AGENT away
 // from /users. This is already covered in access-control.spec.ts ("authenticated AGENT visiting
-// /users directly is redirected to / by AdminLayout") and re-asserted in create-user.spec.ts for
-// that feature; following the same judgment call here so this file also stands on its own as
-// proof the new Edit User surface didn't loosen the existing admin gate.
+// /users directly is redirected to /dashboard by AdminLayout") and re-asserted in
+// create-user.spec.ts for that feature; following the same judgment call here so this file also
+// stands on its own as proof the new Edit User surface didn't loosen the existing admin gate.
 test("non-admin AGENT cannot reach /users", async ({ page }) => {
   await loginViaUi(page, AGENT_USER);
   await page.goto("/users");
-  await expect(page).toHaveURL("/");
+  await expect(page).toHaveURL("/dashboard");
 });

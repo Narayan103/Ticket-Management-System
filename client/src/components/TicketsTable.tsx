@@ -11,6 +11,7 @@ import { Link } from '@/components/ui/link'
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from '@/components/ui/table'
 import { Card } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
+import { Badge } from '@/components/ui/badge'
 import TableSkeleton from '@/components/TableSkeleton'
 import EmptyState from '@/components/EmptyState'
 import StatusDot from '@/components/StatusDot'
@@ -18,14 +19,17 @@ import { formatDateTime } from '@/lib/format-date'
 import { isFresh } from '@/lib/is-fresh'
 import { TICKET_STATUS_LABELS, type TicketStatus } from '@/types/ticket-status'
 import { TICKET_CATEGORY_LABELS, type TicketCategory } from '@/types/ticket-category'
+import { TICKET_PRIORITY_LABELS, TICKET_PRIORITY_BADGE_STYLES, type TicketPriority } from '@/types/ticket-priority'
 
 export type Ticket = {
   id: number
   subject: string
   status: TicketStatus
   category: TicketCategory | null
+  priority: TicketPriority
   fromEmail: string
   fromName: string
+  assignedTo: { id: string; name: string } | null
   createdAt: string
   updatedAt: string
 }
@@ -89,6 +93,27 @@ const columns: ColumnDef<Ticket>[] = [
         {TICKET_STATUS_LABELS[row.original.status]}
       </span>
     ),
+  },
+  {
+    id: 'priority',
+    header: 'Priority',
+    accessorKey: 'priority',
+    cell: ({ row }) => (
+      <Badge variant="outline" className={TICKET_PRIORITY_BADGE_STYLES[row.original.priority]}>
+        {TICKET_PRIORITY_LABELS[row.original.priority]}
+      </Badge>
+    ),
+  },
+  {
+    id: 'assignedTo',
+    header: 'Assignee',
+    accessorKey: 'assignedTo',
+    cell: ({ row }) =>
+      row.original.assignedTo ? (
+        row.original.assignedTo.name
+      ) : (
+        <span className="text-muted-foreground">Unassigned</span>
+      ),
   },
   {
     id: 'createdAt',

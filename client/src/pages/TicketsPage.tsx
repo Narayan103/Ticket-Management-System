@@ -5,7 +5,12 @@ import { apiClient } from '@/lib/api-client'
 import { getErrorMessage } from '@/lib/get-error-message'
 import { useDebouncedValue } from '@/lib/use-debounced-value'
 import TicketsTable, { type Ticket } from '@/components/TicketsTable'
-import TicketsFilters, { type StatusFilter, type CategoryFilter } from '@/components/TicketsFilters'
+import TicketsFilters, {
+  type StatusFilter,
+  type CategoryFilter,
+  type PriorityFilter,
+  type AssigneeFilter,
+} from '@/components/TicketsFilters'
 import TicketsPagination from '@/components/TicketsPagination'
 import ErrorMessage from '@/components/ErrorMessage'
 
@@ -14,20 +19,22 @@ function TicketsPage() {
   const [search, setSearch] = useState('')
   const [status, setStatus] = useState<StatusFilter>('ALL')
   const [category, setCategory] = useState<CategoryFilter>('ALL')
+  const [priority, setPriority] = useState<PriorityFilter>('ALL')
+  const [assignee, setAssignee] = useState<AssigneeFilter>('ALL')
   const [page, setPage] = useState(1)
   const debouncedSearch = useDebouncedValue(search, 300)
   const sort = sorting[0]
 
   useEffect(() => {
     setPage(1)
-  }, [sort, debouncedSearch, status, category])
+  }, [sort, debouncedSearch, status, category, priority, assignee])
 
   const {
     data = { tickets: [] as Ticket[], totalCount: 0, pageSize: 10 },
     isPending,
     error,
   } = useQuery({
-    queryKey: ['tickets', sort, debouncedSearch, status, category, page],
+    queryKey: ['tickets', sort, debouncedSearch, status, category, priority, assignee, page],
     queryFn: () =>
       apiClient
         .get<{ tickets: Ticket[]; totalCount: number; page: number; pageSize: number }>('/api/tickets', {
@@ -37,6 +44,8 @@ function TicketsPage() {
             search: debouncedSearch || undefined,
             status: status === 'ALL' ? undefined : status,
             category: category === 'ALL' ? undefined : category,
+            priority: priority === 'ALL' ? undefined : priority,
+            assignedToId: assignee === 'ALL' ? undefined : assignee,
             page,
           },
         })
@@ -58,6 +67,10 @@ function TicketsPage() {
         onStatusChange={setStatus}
         category={category}
         onCategoryChange={setCategory}
+        priority={priority}
+        onPriorityChange={setPriority}
+        assignee={assignee}
+        onAssigneeChange={setAssignee}
       />
 
       <ErrorMessage message={errorMessage} />

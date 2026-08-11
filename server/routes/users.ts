@@ -17,7 +17,9 @@ usersRouter.get("/", requireAuth, requireAdmin, async (_req, res) => {
   res.json({ users });
 });
 
-usersRouter.get("/agents", requireAuth, requireAdmin, async (_req, res) => {
+// Any signed-in user (not just admins) can list active agents — needed to populate the
+// tickets list's Assignee filter for everyone, not just admins who can reassign tickets.
+usersRouter.get("/agents", requireAuth, async (_req, res) => {
   const agents = await db.authUser.findMany({
     where: { deletedAt: null, role: Role.AGENT },
     select: { id: true, name: true },
