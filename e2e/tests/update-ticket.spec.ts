@@ -32,13 +32,19 @@ test.describe("GET /api/users/agents authorization", () => {
     expect(await res.json()).toEqual({ error: "Unauthorized" });
   });
 
-  // Same admin-only gate as /api/users, unlike /api/tickets/:id — an AGENT can view a ticket's
-  // assignee but can't list agents to assign it to.
-  test("AGENT session -> 403 Forbidden", async ({ page }) => {
+  // Unlike /api/users (admin-only), this route is open to any signed-in user — an AGENT needs
+  // to see the agent list to populate the tickets list's Assignee filter, even though only an
+  // ADMIN can actually change a ticket's assignedToId via PATCH below.
+  test("AGENT session -> 200 with only AGENT-role users, in the documented shape", async ({ page }) => {
     await loginViaUi(page, AGENT_USER);
     const res = await page.request.get(AGENTS_API);
-    expect(res.status()).toBe(403);
-    expect(await res.json()).toEqual({ error: "Forbidden" });
+    expect(res.status()).toBe(200);
+
+    const body = await res.json();
+    expect(Array.isArray(body.agents)).toBe(true);
+    const seededAgent = body.agents.find((a: { name: string }) => a.name === AGENT_USER.name);
+    expect(seededAgent).toBeDefined();
+    expect(Object.keys(seededAgent).sort()).toEqual(["id", "name"].sort());
   });
 
   test("ADMIN session -> 200 with only AGENT-role users, in the documented shape", async ({ page }) => {
@@ -119,12 +125,14 @@ test.describe("PATCH /api/tickets/:id (assignedToId) authorization & validation"
   // present, so the schema-level "at least one field" rule rejects it before any per-field
   // validation runs. Exact message confirmed against updateTicketSchema's own refine message,
   // not guessed.
-  test("empty body -> 400 (at least one of status, category, or assignedToId is required)", async ({ page }) => {
+  test("empty body -> 400 (at least one of status, category, priority, or assignedToId is required)", async ({ page }) => {
     const ticket = await createTicket(page.request);
     await loginViaUi(page, ADMIN_USER);
     const res = await page.request.patch(`${TICKETS_API}/${ticket.id}`, { data: {} });
     expect(res.status()).toBe(400);
-    expect(await res.json()).toEqual({ error: "At least one of status, category, or assignedToId must be provided" });
+    expect(await res.json()).toEqual({
+      error: "At least one of status, category, priority, or assignedToId must be provided",
+    });
   });
 
   test("assignedToId that isn't an active agent -> 400 Assignee must be an active agent", async ({ page }) => {
@@ -180,7 +188,7 @@ test.describe("PATCH /api/tickets/:id (assignedToId) authorization & validation"
     // Same response shape as GET /api/tickets/:id (tickets-detail.spec.ts) — no extra/missing
     // fields introduced by the PATCH-specific update.
     expect(Object.keys(assignBody.ticket).sort()).toEqual(
-      ["id", "subject", "status", "category", "fromEmail", "fromName", "body", "createdAt", "updatedAt", "assignedTo"].sort(),
+      ["id", "subject", "status", "category", "priority", "fromEmail", "fromName", "body", "createdAt", "updatedAt", "assignedTo"].sort(),
     );
 
     const unassignRes = await page.request.patch(`${TICKETS_API}/${ticket.id}`, {

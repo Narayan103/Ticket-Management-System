@@ -81,7 +81,7 @@ test.describe("GET /api/tickets/:id authorization", () => {
     // No unexpected extra/missing fields in the response shape (e.g. assignedToId from the
     // list/webhook response isn't part of this endpoint's documented shape).
     expect(Object.keys(body.ticket).sort()).toEqual(
-      ["id", "subject", "status", "category", "fromEmail", "fromName", "body", "bodyHtml", "createdAt", "updatedAt", "assignedTo", "replies"].sort(),
+      ["id", "subject", "status", "category", "priority", "fromEmail", "fromName", "body", "bodyHtml", "createdAt", "updatedAt", "assignedTo", "replies"].sort(),
     );
   });
 
