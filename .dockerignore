@@ -5,5 +5,7 @@ node_modules
 .git
 .env
 **/.env
-e2e
+e2e/node_modules
+e2e/test-results
+e2e/playwright-report
 *.log
